@@ -29,8 +29,12 @@ int main(int argc, char** argv)
     int port;
     float interval;
     float workTime;
+    rejectedConnections = 0;
+    acceptedConnections = 0;
 
     read_parameters(argc, argv, &numOfConnections, &port, &interval, &workTime);
+    int *localFileDescriptors = (int *) malloc (numOfConnections * sizeof(int));
+
     printf("%d\n", numOfConnections);
 
     int epoll_fd = create_epoll();
@@ -65,9 +69,10 @@ int main(int argc, char** argv)
     //---------------------------------------------------------------------------------------------
 
 
-    while(1)
+    while(acceptedConnections + rejectedConnections < numOfConnections)
     {
         printf("Jestem w while1\n");
+        printf("accepted Connection: %d\nrejected %d\n",acceptedConnections, rejectedConnections);
         int count = epoll_wait(epoll_fd, events, MAX_EVENTS, -1);
 
         if (count == -1)
@@ -76,7 +81,7 @@ int main(int argc, char** argv)
         printf("Jestem w while2\n");
 
 
-        for (int i = 0; i < count; ++i) {
+        for (int i = 0; i < count; i++) {
             printf("petla for : %d\n", i);
 
             if (events[i].events & EPOLLERR || events[i].events & EPOLLHUP || !(events[i].events & EPOLLIN))
@@ -104,13 +109,13 @@ int main(int argc, char** argv)
                 if (events[i].data.fd == serverFd)
                 {
                     /*int incomfd = */
-                    acceptConnection(events[i].data.fd, epoll_fd);
+                    acceptConnection(events[i].data.fd, epoll_fd, &localFileDescriptors);
 
                     /*
                      * Losuj deskryptor i wyslij znacznik!!!!!!
                      */
 
-                    char buf[BUFFER_SIZE];
+                    //char buf[BUFFER_SIZE];
                     write(serverFd, "Jestem w polaczeniu local tu multiwriter\n", 30);
                     //write(1, &buf, 30);
                     printf("polaczylo sie z LOCAL- acceptConnection\n");
@@ -143,19 +148,23 @@ void readFromServer(int fd)
 {
     while(1)
     {
-        printf("readFromServer!\n");
+
         struct sockaddr_un * local_address = (struct sockaddr_un *) malloc (sizeof(struct sockaddr_un));
 
         if( (read(fd, local_address, sizeof(struct sockaddr_un))) != sizeof(struct sockaddr_un) )
             break;
 
+        printf("readFromServer!\n");
+
         if((int)local_address->sun_family == -1)
         {
             printf("readFromServer - send structure with -1 \n");
+            rejectedConnections++;
         }
         else
         {
-            printf("Odczytałem strukture sockaddr_un!\n");
+            printf("Odczytałem strukture sockaddr_un z 1!\n");
+            acceptedConnections++;
         }
         sleep(1);
     }
@@ -264,7 +273,7 @@ int createLocalServer(struct sockaddr_un address_local)
 
 
 
-int acceptConnection(int serverFd, int epoll_fd)
+int acceptConnection(int serverFd, int epoll_fd, int** localFileDecriptors)
 {
     /*struct sockaddr in_address;
     int in_address_size = sizeof(in_address);
@@ -282,6 +291,9 @@ int acceptConnection(int serverFd, int epoll_fd)
 
     set_non_blocking(incomfd);
     epollAdd(incomfd, EPOLLIN | EPOLLET, epoll_fd);
+
+    **localFileDecriptors = incomfd;
+    (*localFileDecriptors)++;
 
     return incomfd;
 }
