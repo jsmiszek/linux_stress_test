@@ -74,7 +74,7 @@ int main(int argc, char** argv)
         printf("Jestem po epoll wait\n");
 
 
-        for(int i = 0; i < count; i++)
+        for(int i = 0; i < count; ++i)
         {
             printf("for count : %d\n", count);
             printf("Typ polacznia: %d\n",(((struct typeOfConnection*)events[i].data.ptr)->type) );
@@ -88,6 +88,11 @@ int main(int argc, char** argv)
                 {
                     printf("Cannot close file descriptor: %d", errno);
                     exit(-1);
+                    break;
+                }
+                else
+                {
+                    printf("Closed file descriptor: %d\n", events[i].data.fd);
                 }
                 epoll_ctl(epoll_fd, EPOLL_CTL_DEL, events[i].data.fd, NULL);
 

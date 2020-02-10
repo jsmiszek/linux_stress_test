@@ -72,7 +72,6 @@ int main(int argc, char** argv)
     while(acceptedConnections + rejectedConnections < numOfConnections)
     {
         printf("Jestem w while1\n");
-        printf("accepted Connection: %d\nrejected %d\n",acceptedConnections, rejectedConnections);
         int count = epoll_wait(epoll_fd, events, MAX_EVENTS, -1);
 
         if (count == -1)
@@ -83,24 +82,40 @@ int main(int argc, char** argv)
 
         for (int i = 0; i < count; i++) {
             printf("petla for : %d\n", i);
+            printf("accepted Connection: %d\nrejected connecton: %d\n",acceptedConnections, rejectedConnections);
+
 
             if (events[i].events & EPOLLERR || events[i].events & EPOLLHUP || !(events[i].events & EPOLLIN))
             {
                 /*if(events[i].data.fd != serverFd && events[i].data.fd != clientSocketFd)
                 {
-                    close(events[i].data.fd);
-                    epoll_ctl(epoll_fd, EPOLL_CTL_DEL, events[i].data.fd,NULL);
                     //remove_from_working_sockets(events[i].data.fd);
                 }
                 else*/
                 {
-                    if ((close(events[i].data.fd)) == -1)
+                   /* if ((close(events[i].data.fd)) == -1)
                     {
                         printf("Multiwriter - main - close error %d \n", errno);
                         exit(-1);
+                    }*/
+                    if( epoll_ctl(epoll_fd, EPOLL_CTL_DEL, events[i].data.fd, NULL) == -1)
+                    {
+                        printf("main - epoll_ctl delete error!\n");
+                        exit(-1);
                     }
-                    epoll_ctl(epoll_fd, EPOLL_CTL_DEL, events[i].data.fd, NULL);
                     printf("\n\nevents flag\n");
+                    for (int j = 0; i < numOfConnections; ++i)
+                    {
+                        if( localFileDescriptors[j] == events[j].data.fd)
+                        {
+                            localFileDescriptors[j] = 0;
+                        }
+                    }
+                    if(close(events[i].data.fd) == -1)
+                    {
+                        printf("Cannot close descriptor: %d\n", events[i].data.fd);
+
+                    }
                 }
 
             }
@@ -134,6 +149,14 @@ int main(int argc, char** argv)
 
         }
     }
+
+    if (epoll_ctl(epoll_fd, EPOLL_CTL_DEL, clientSocketFd, NULL) < 0)
+    {
+        printf("after while cannot epoll_ctl delete!\n");
+        exit(-1);
+    }
+
+    close(serverFd);
     //tu wysyłam znaczniki
     //petla while ma sie skonczyc po ilosci polaczen udanych nie
 
@@ -141,8 +164,21 @@ int main(int argc, char** argv)
 
     return 0;
 }
+/*
 
-
+void closeLocalDescriptors(int fd)
+{
+    int i=0;
+    while(i<local_sock_no)
+        if(local_sock_fds[i++]==fd)
+            break;
+    if(i==local_sock_no)
+        return;
+    close(local_sock_fds[--i]);
+    epoll_ctl(epoll_fd,EPOLL_CTL_DEL,local_sock_fds[i],NULL);
+    local_sock_fds[i]=local_sock_fds[--local_sock_no];
+}
+*/
 
 void readFromServer(int fd)
 {
@@ -294,6 +330,8 @@ int acceptConnection(int serverFd, int epoll_fd, int** localFileDecriptors)
 
     **localFileDecriptors = incomfd;
     (*localFileDecriptors)++;
+
+    printf("accepted local connection - acceptConnection!\n");
 
     return incomfd;
 }
