@@ -1,0 +1,4 @@
+/home/just/semestr5/linux/linux_stress_test/cmake-build-debug/CMakeFiles/edit_cache.dir
+/home/just/semestr5/linux/linux_stress_test/cmake-build-debug/CMakeFiles/rebuild_cache.dir
+/home/just/semestr5/linux/linux_stress_test/cmake-build-debug/CMakeFiles/massivereader.dir
+/home/just/semestr5/linux/linux_stress_test/cmake-build-debug/CMakeFiles/multiwriter.dir
