@@ -37,7 +37,7 @@ void createTimer(float workTime);
 
 //////////////////////time
 
-void sendDataToLocal();
+void sendDataToLocal(int* fdTab, struct sockaddr_un address);
 char* convertingTime(struct timespec tim);
 
 

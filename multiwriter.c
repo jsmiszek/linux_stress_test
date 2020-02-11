@@ -166,22 +166,21 @@ int main(int argc, char** argv) {
     tim.tv_sec = (int)(interval * 1000) / 1000000000;
     tim.tv_nsec = (int)(interval * 1000) % 1000000000 ;
 
-    int i = 0;
-    while (numOfConnections--)
+
+   /* printf("TABLICA DESKRYPTOROW! : ");
+    for(int i = 0; i < acceptedConnections; i++)
+        printf("  %d  ", localFileDescriptors[i]);
+    printf("\n");*/
+    int i = 1;
+    while (i)
     {
        /* printf("Na deskryptor %d\n", localFileDescriptors[i]);
         write(localFileDescriptors[i], "ABCD\n", strlen("ABCD\n"));
         printf("Wyslalem komunikat po af local\n");*/
 
-
-       sendDataToLocal(localFileDescriptors);
+       sendDataToLocal(localFileDescriptors, local_address);
        nanosleep(&tim,NULL);
 
-
-
-
-
-        i++;
     }
    /* if (epoll_ctl(epoll_fd, EPOLL_CTL_DEL, clientSocketFd, NULL) < 0)
     {
@@ -214,18 +213,46 @@ void closeLocalDescriptors(int fd)
 */
 
 
-void sendDataToLocal(int* fdTab)
+void sendDataToLocal(int* fdTab, struct sockaddr_un address)
 {
     struct timespec timestamp;
+    int randSocketNum;
+    char* timeRepr;
+
     if(clock_gettime(CLOCK_REALTIME, &timestamp) == -1)
     {
         printf("sendLocalData - clock_gettime error %d\n", errno);
         exit(-1);
     }
 
-    int socketNum = rand() % acceptedConnections;
 
-    char* timeRepr = convertingTime(timestamp);
+    randSocketNum = rand() % (acceptedConnections);
+    while(fdTab[randSocketNum] == 0)
+        randSocketNum = rand() % (acceptedConnections);
+
+
+    timeRepr = convertingTime(timestamp);
+    write(1, timeRepr, 21);
+
+    if(write(fdTab[randSocketNum], timeRepr, 21) == -1 )
+    {
+        write(1, "write1 error\n", 14);
+        exit(-1);
+    }
+    if(write(fdTab[randSocketNum], &address.sun_path, 108) == -1 )
+    {
+        write(1, "write2 error\n", 14);
+        exit(-1);
+    }
+    if(write(fdTab[randSocketNum], &timestamp, sizeof(timestamp)) == -1 )
+    {
+        write(1, "write2 error\n", 14);
+        exit(-1);
+    }
+
+
+
+
 }
 
 char* convertingTime(struct timespec tim)
@@ -234,7 +261,7 @@ char* convertingTime(struct timespec tim)
     int seconds;
     int nanoseconds;
 
-    char out[21] = {'0'};
+    char* out = (char*)calloc(21, sizeof(char));
     out[20] = 0;
 
     seconds = (int)tim.tv_sec % 60;
@@ -270,7 +297,7 @@ char* convertingTime(struct timespec tim)
     out[9] = (char)(nanoseconds % 10) + '0'; nanoseconds /= 10;
     out[8] = (char)(nanoseconds % 10) + '0';
 
-    write(1, out, 21);
+    //write(1, out, 21);
     write(1,"\n", 1);
 
     return out;
@@ -457,13 +484,15 @@ int acceptConnection(int serverFd, int epoll_fd, int** fdTab)
     /*(struct sockaddr*) &in_address, (socklen_t *)&in_address_size)*/
 
     printf("acceptConnection WCHODZE KURWA!!\n");
-    int incomfd;
+    int incomfd = 0;
 
     if((incomfd = accept(serverFd, NULL, NULL)) == -1)
     {
         printf("acceptConnection error!\n");
+        //rejectedConnections++;
         exit(-1);
     }
+    //acceptedConnections++;
 
     //set_non_blocking(incomfd);
 
@@ -471,7 +500,7 @@ int acceptConnection(int serverFd, int epoll_fd, int** fdTab)
     **fdTab = incomfd;
     printf("acceptConnection deskryptor: %d\n",**fdTab);
 
-    (*fdTab)++;
+    (*fdTab) += 1;
 
     epollAdd(incomfd, EPOLLIN | EPOLLET, epoll_fd);
     //printf("accepted local connection - acceptConnection!\n");
