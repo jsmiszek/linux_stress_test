@@ -11,7 +11,7 @@
 
 int create_epoll();
 void set_non_blocking(int fd);
-void epollAdd(int fd, int flags, int epoll_fd);
+
 
 
 

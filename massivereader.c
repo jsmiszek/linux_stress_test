@@ -34,21 +34,6 @@ int main(int argc, char** argv)
 
     read_parameters(argc, argv, &port, &prefix);
 
-    ///////////////////////////// Connect as client ////////////////////////////////
-
-    //int clientFd;
-
-    //clientFd = socketAsClient();
-
-
-
-//teraz wyslij sobie ta struckture z multiwritera
-//i nawiaz polaczenie af_local z multiwriterem
-
-    /////////////////////////////////////////////////////////////////////////////
-
-
-
 
     ////////////////////////////// Connect as server ////////////////////////
 
@@ -77,27 +62,27 @@ int main(int argc, char** argv)
         for(int i = 0; i < count; ++i)
         {
             printf("for count : %d\n", count);
-            printf("Typ polacznia: %d\n",(((struct typeOfConnection*)events[i].data.ptr)->type) );
+            printf("Typ polaczenia: %d\n",(((struct typeOfConnection*)events[i].data.ptr)->type) );
 
 
-            if (events[i].events & EPOLLERR || events[i].events & EPOLLHUP || !(events[i].events & EPOLLIN))
-            {
+            if (events[i].events & EPOLLERR || events[i].events & EPOLLHUP || !(events[i].events & EPOLLIN)) {
                 printf("\n\nevents flag\n");
-
-                if(close (events[i].data.fd) == -1)
-                {
+                if (epoll_ctl(epoll_fd, EPOLL_CTL_DEL, (((struct typeOfConnection *) events[i].data.ptr)->fd), NULL) ==
+                    -1) {
+                    printf("epoll delete error main!\n");
+                    exit(-1);
+                }
+                if (close(((struct typeOfConnection *) events[i].data.ptr)->fd) == -1) {
                     printf("Cannot close file descriptor: %d", errno);
                     exit(-1);
-                    break;
+                    //break;
                 }
-                else
-                {
-                    printf("Closed file descriptor: %d\n", events[i].data.fd);
-                }
-                epoll_ctl(epoll_fd, EPOLL_CTL_DEL, events[i].data.fd, NULL);
-
+                /*  else
+                  {
+                      printf("Closed file descriptor: %d\n", events[i].data.fd);
+                  }*/
+                //epoll_ctl(epoll_fd, EPOLL_CTL_DEL, events[i].data.fd, NULL);
             }
-
             else if ((((struct typeOfConnection*)events[i].data.ptr)->type) == 1 )
             {
                 /*
@@ -128,10 +113,6 @@ int main(int argc, char** argv)
                 read(((struct typeOfConnection*)events[i].data.ptr)->fd, &buf, 30);
                 write(1, &buf, 30);
             }
-
-
-
-
         }
 
         sleep(1);
@@ -179,9 +160,6 @@ int connectAsClient(int clientFd, struct sockaddr_un* address_local, int epoll_f
 
 
     epollAdd1(EPOLLIN | EPOLLET, epoll_fd, conn);
-
-
-
 
     return 0;
 }
@@ -233,7 +211,7 @@ void read_from_inet_connection(int fd, int epoll_fd)
 
 void listenToClient(int fd)
 {
-    if (listen(fd, 50) == -1)
+    if (listen(fd, 5) == -1)
     {
         printf("Listen error!\n");
         exit(-1);

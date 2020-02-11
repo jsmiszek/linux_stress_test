@@ -39,15 +39,3 @@ void set_non_blocking(int fd)
     }
 }
 
-void epollAdd(int fd, int flags, int epoll_fd)
-{
-    struct epoll_event event;
-    event.data.fd = fd;
-    event.events = flags;
-
-    if((epoll_ctl(epoll_fd, EPOLL_CTL_ADD, event.data.fd, &event)) == -1)
-    {
-        printf("epollAdd - epoll_ctl error!\n");
-        exit(-1);
-    }
-}

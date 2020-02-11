@@ -14,7 +14,7 @@ int connectAsClient(int port);
 struct sockaddr_un sockaddrRandom();
 //void makeSocket(int* clientSocketFd);
 //void listenFromClient(int fd, int count);
-int acceptConnection(int serverFd, int epoll_fd, int** localFileDecriptors);
+int acceptConnection(int serverFd, int epoll_fd, int** localFileDescriptors);
 
 void sendStructureToServer(struct sockaddr_un address, int fd, int count);
 
@@ -25,7 +25,7 @@ void readFromServer(int fd);
 
 int createLocalServer(struct sockaddr_un address_local);
 
-
+void epollAdd(int fd, int flags, int epoll_fd);
 
 
 

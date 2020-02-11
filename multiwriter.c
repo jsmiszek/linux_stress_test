@@ -33,6 +33,7 @@ int main(int argc, char** argv)
     acceptedConnections = 0;
 
     read_parameters(argc, argv, &numOfConnections, &port, &interval, &workTime);
+
     int *localFileDescriptors = (int *) malloc (numOfConnections * sizeof(int));
 
     printf("%d\n", numOfConnections);
@@ -47,7 +48,11 @@ int main(int argc, char** argv)
     int serverFd;
     serverFd = createLocalServer(local_address);
     epollAdd(serverFd, EPOLLIN | EPOLLET, epoll_fd);
-    listen(serverFd, numOfConnections);
+    if(listen(serverFd, numOfConnections) == -1)
+    {
+        printf("Listen server error\n");
+        exit(-1);
+    }
 
 
     // -------------------------- client ---------------------------------------------------------
@@ -73,6 +78,7 @@ int main(int argc, char** argv)
     {
         printf("Jestem w while1\n");
         int count = epoll_wait(epoll_fd, events, MAX_EVENTS, -1);
+        printf("count w while : %d\n",count);
 
         if (count == -1)
             printf("epoll_wait error\n");
@@ -98,24 +104,25 @@ int main(int argc, char** argv)
                         printf("Multiwriter - main - close error %d \n", errno);
                         exit(-1);
                     }*/
-                    if( epoll_ctl(epoll_fd, EPOLL_CTL_DEL, events[i].data.fd, NULL) == -1)
-                    {
-                        printf("main - epoll_ctl delete error!\n");
-                        exit(-1);
-                    }
-                    printf("\n\nevents flag\n");
-                    for (int j = 0; i < numOfConnections; ++i)
-                    {
-                        if( localFileDescriptors[j] == events[j].data.fd)
-                        {
-                            localFileDescriptors[j] = 0;
-                        }
-                    }
                     if(close(events[i].data.fd) == -1)
                     {
                         printf("Cannot close descriptor: %d\n", events[i].data.fd);
 
                     }
+                    if( epoll_ctl(epoll_fd, EPOLL_CTL_DEL, events[i].data.fd, NULL) == -1)
+                    {
+                        printf("main - epoll_ctl delete error!\n");
+                        exit(-1);
+                    }
+                    printf("\n\nevents flag\n");/*
+                    for (int j = 0; j < numOfConnections; ++j)
+                    {
+                        if( localFileDescriptors[j] == events[j].data.fd)
+                        {
+                            localFileDescriptors[j] = 0;
+                        }
+                    }*/
+
                 }
 
             }
@@ -131,7 +138,7 @@ int main(int argc, char** argv)
                      */
 
                     //char buf[BUFFER_SIZE];
-                    write(serverFd, "Jestem w polaczeniu local tu multiwriter\n", 30);
+//                    write(serverFd, "Jestem w polaczeniu local tu multiwriter\n", 30);
                     //write(1, &buf, 30);
                     printf("polaczylo sie z LOCAL- acceptConnection\n");
 
@@ -140,23 +147,28 @@ int main(int argc, char** argv)
                 {
                     readFromServer(clientSocketFd);
                 }
-                sleep(1);
+               // sleep(1);
             }
 
 
-            sleep(1);
+            //sleep(1);
 
 
         }
     }
+
+    //(*localFileDescriptors)--;
+    printf("Na deskryptor %d\n",*localFileDescriptors);
+    write(*localFileDescriptors, "Jestem w polaczeniu local tu multiwriter\n", 30);
+    printf("Wyslalem komunikat po af local\n");
 
     if (epoll_ctl(epoll_fd, EPOLL_CTL_DEL, clientSocketFd, NULL) < 0)
     {
         printf("after while cannot epoll_ctl delete!\n");
         exit(-1);
     }
-
-    close(serverFd);
+    printf("Kończe program!!!\n");
+    //close(serverFd);
     //tu wysyłam znaczniki
     //petla while ma sie skonczyc po ilosci polaczen udanych nie
 
@@ -199,10 +211,10 @@ void readFromServer(int fd)
         }
         else
         {
-            printf("Odczytałem strukture sockaddr_un z 1!\n");
+            printf("Odczytałem strukture sun_family = AF_LOCAL!\n");
             acceptedConnections++;
         }
-        sleep(1);
+        //sleep(1);
     }
 }
 
@@ -211,7 +223,11 @@ void sendStructureToServer(struct sockaddr_un address, int fd, int count)
 {
     for(int i = 0; i < count; i++)
     {
-        write(fd, &address, sizeof(address));
+        if( write(fd, &address, sizeof(struct sockaddr_un)) == -1)
+        {
+            printf("sendStructureToServer - write - error!\n");
+            exit(-1);
+        }
     }
     printf("Wysyłam %d razy strukture!\n", count);
 }
@@ -293,7 +309,7 @@ int createLocalServer(struct sockaddr_un address_local)
         exit(-1);
     }
 
-    if( (bind(serverFd, (struct sockaddr*) &address_local, sizeof(address_local))) == -1 )
+    if( (bind(serverFd, (struct sockaddr*) &address_local, sizeof(struct sockaddr_un))) == -1 )
     {
         printf("multiwriter - createLocalServer - bind error: %d\n", errno);
         exit(-1);
@@ -309,7 +325,7 @@ int createLocalServer(struct sockaddr_un address_local)
 
 
 
-int acceptConnection(int serverFd, int epoll_fd, int** localFileDecriptors)
+int acceptConnection(int serverFd, int epoll_fd, int** localFileDescriptors)
 {
     /*struct sockaddr in_address;
     int in_address_size = sizeof(in_address);
@@ -317,6 +333,7 @@ int acceptConnection(int serverFd, int epoll_fd, int** localFileDecriptors)
 
     /*(struct sockaddr*) &in_address, (socklen_t *)&in_address_size)*/
 
+    printf("acceptConnection WCHODZE KURWA!!\n");
     int incomfd;
 
     if((incomfd = accept(serverFd, NULL, NULL)) == -1)
@@ -328,8 +345,10 @@ int acceptConnection(int serverFd, int epoll_fd, int** localFileDecriptors)
     set_non_blocking(incomfd);
     epollAdd(incomfd, EPOLLIN | EPOLLET, epoll_fd);
 
-    **localFileDecriptors = incomfd;
-    (*localFileDecriptors)++;
+    **localFileDescriptors = incomfd;
+    printf("acceptConnection deskryptor: %d\n",**localFileDescriptors);
+
+    (*localFileDescriptors)++;
 
     printf("accepted local connection - acceptConnection!\n");
 
@@ -406,6 +425,18 @@ void read_parameters(int argc, char** argv, int* numOfConnections,int* port, flo
 
 }
 
+void epollAdd(int fd, int flags, int epoll_fd)
+{
+    struct epoll_event event;
+    event.data.fd = fd;
+    event.events = flags;
+
+    if((epoll_ctl(epoll_fd, EPOLL_CTL_ADD, event.data.fd, &event)) == -1)
+    {
+        printf("epollAdd - epoll_ctl error!\n");
+        exit(-1);
+    }
+}
 
 
 
