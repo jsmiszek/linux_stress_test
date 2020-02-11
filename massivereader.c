@@ -61,8 +61,10 @@ int main(int argc, char** argv)
 
         for(int i = 0; i < count; ++i)
         {
-            printf("for count : %d\n", count);
+            printf("\nfor count : %d\n", count);
             printf("Typ polaczenia: %d\n",(((struct typeOfConnection*)events[i].data.ptr)->type) );
+            printf("Deskryptor: %d\n",(((struct typeOfConnection*)events[i].data.ptr)->fd) );
+
 
 
             if (events[i].events & EPOLLERR || events[i].events & EPOLLHUP || !(events[i].events & EPOLLIN)) {
@@ -83,7 +85,7 @@ int main(int argc, char** argv)
                   }*/
                 //epoll_ctl(epoll_fd, EPOLL_CTL_DEL, events[i].data.fd, NULL);
             }
-            else if ((((struct typeOfConnection*)events[i].data.ptr)->type) == 1 )
+            else if ((((struct typeOfConnection*)events[i].data.ptr)->type) == 1 ) //inet server
             {
                 /*
                  * akceptuje połączenie AF_INET
@@ -95,7 +97,7 @@ int main(int argc, char** argv)
                 printf("Serwer inet akceptuje polaczenie\n");
 
             }
-            else if(((struct typeOfConnection*)events[i].data.ptr)->type == 2 )
+            else if(((struct typeOfConnection*)events[i].data.ptr)->type == 2 ) //polączenie inet
             {
                 /*
                 * czytam strukture z polączenie AF_INET
@@ -105,17 +107,17 @@ int main(int argc, char** argv)
                 printf("czytanie struktury i polaczenie af_local, odeslanie struktury\n");
                 read_from_inet_connection((((struct typeOfConnection*)events[i].data.ptr)->fd), epoll_fd);
             }
-            else if((((struct typeOfConnection*)events[i].data.ptr)->type) == 3 )
+            else if((((struct typeOfConnection*)events[i].data.ptr)->type) == 3 ) //local
             {
                 printf("Jestem local client\n");
 
                 char buf[BUFSIZE];
-                read(((struct typeOfConnection*)events[i].data.ptr)->fd, &buf, 30);
-                write(1, &buf, 30);
+                read(((struct typeOfConnection*)events[i].data.ptr)->fd, buf, 30);
+                write(1, buf, 30);
             }
         }
 
-        sleep(1);
+        //sleep(1);
 
     }
 
@@ -203,7 +205,7 @@ void read_from_inet_connection(int fd, int epoll_fd)
 
             printf("Cannot connect to local server!\n%s\n ", address_local->sun_path + 1);
         }
-        sleep(1);
+        //sleep(1);
     }
 
 }
