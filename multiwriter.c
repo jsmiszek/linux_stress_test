@@ -33,7 +33,7 @@ int main(int argc, char** argv) {
 
     read_parameters(argc, argv, &numOfConnections, &port, &interval, &workTime);
 
-    int *localFileDescriptors = (int *) malloc(numOfConnections * sizeof(int));
+    int *localFileDescriptors = (int *) calloc (numOfConnections, sizeof(int));
     int *fdTab = localFileDescriptors;
 
     printf("%d\n", numOfConnections);
@@ -106,6 +106,11 @@ int main(int argc, char** argv) {
                         printf("main - epoll_ctl delete error!\n");
                         exit(-1);
                     }
+
+                    for(int i = 0; i < numOfConnections; ++i)
+                        if(localFileDescriptors[i] == events[i].data.fd)
+                            localFileDescriptors[i] = 0;
+
                     if (close(events[i].data.fd) == -1) {
                         printf("Cannot close descriptor: %d\n", events[i].data.fd);
 
@@ -147,23 +152,36 @@ int main(int argc, char** argv) {
 
         }
     }
-    struct timespec tim = {0, 500000000};
+    //sleep(1);
+
+    if (epoll_ctl(epoll_fd, EPOLL_CTL_DEL, clientSocketFd, NULL) < 0)
+        printf("Cannot delete fd after while\n");
+
+    close(clientSocketFd);
+
+    //int* sockets = localFileDescriptors;
+   // printf("Wszystkie dekryptory: ");
+
+
+    //printf(" END\n");
+
+    struct timespec tim = {0, 700000000};
+
     int i = 0;
-    while ( i < numOfConnections)
+    while (numOfConnections--)
     {
-        printf("Na deskryptor %d\n", *localFileDescriptors);
-        write(*localFileDescriptors, "Jestem w polaczeniu local tu multiwriter\n", 30);
+        printf("Na deskryptor %d\n", localFileDescriptors[i]);
+        write(localFileDescriptors[i], "ABCD\n", strlen("ABCD\n"));
         printf("Wyslalem komunikat po af local\n");
         nanosleep(&tim,NULL);
 
-        (*localFileDescriptors)++;
         i++;
     }
-    if (epoll_ctl(epoll_fd, EPOLL_CTL_DEL, clientSocketFd, NULL) < 0)
+   /* if (epoll_ctl(epoll_fd, EPOLL_CTL_DEL, clientSocketFd, NULL) < 0)
     {
         printf("after while cannot epoll_ctl delete!\n");
         exit(-1);
-    }
+    }*/
     printf("Kończe program!!!\n");
     //close(serverFd);
     //tu wysyłam znaczniki
@@ -338,15 +356,16 @@ int acceptConnection(int serverFd, int epoll_fd, int** fdTab)
         exit(-1);
     }
 
-    set_non_blocking(incomfd);
-    epollAdd(incomfd, EPOLLIN | EPOLLET, epoll_fd);
+    //set_non_blocking(incomfd);
+
 
     **fdTab = incomfd;
     printf("acceptConnection deskryptor: %d\n",**fdTab);
 
     (*fdTab)++;
 
-    printf("accepted local connection - acceptConnection!\n");
+    epollAdd(incomfd, EPOLLIN | EPOLLET, epoll_fd);
+    //printf("accepted local connection - acceptConnection!\n");
 
     return incomfd;
 }

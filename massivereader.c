@@ -69,16 +69,15 @@ int main(int argc, char** argv)
 
             if (events[i].events & EPOLLERR || events[i].events & EPOLLHUP || !(events[i].events & EPOLLIN)) {
                 printf("\n\nevents flag\n");
-                if (epoll_ctl(epoll_fd, EPOLL_CTL_DEL, (((struct typeOfConnection *) events[i].data.ptr)->fd), NULL) ==
-                    -1) {
+                if (epoll_ctl(epoll_fd, EPOLL_CTL_DEL, events[i].data.fd, NULL) == -1) {
                     printf("epoll delete error main!\n");
                     exit(-1);
                 }
-                if (close(((struct typeOfConnection *) events[i].data.ptr)->fd) == -1) {
+               /* if (close(((struct typeOfConnection *) events[i].data.ptr)->fd) == -1) {
                     printf("Cannot close file descriptor: %d", errno);
                     exit(-1);
                     //break;
-                }
+                }*/
                 /*  else
                   {
                       printf("Closed file descriptor: %d\n", events[i].data.fd);
@@ -97,7 +96,7 @@ int main(int argc, char** argv)
                 printf("Serwer inet akceptuje polaczenie\n");
 
             }
-            else if(((struct typeOfConnection*)events[i].data.ptr)->type == 2 ) //polączenie inet
+            else if(((struct typeOfConnection*)events[i].data.ptr)->type == 2 ) //polączenie inet client
             {
                 /*
                 * czytam strukture z polączenie AF_INET
@@ -112,12 +111,12 @@ int main(int argc, char** argv)
                 printf("Jestem local client\n");
 
                 char buf[BUFSIZE];
-                read(((struct typeOfConnection*)events[i].data.ptr)->fd, buf, 30);
-                write(1, buf, 30);
+                read(((struct typeOfConnection*)events[i].data.ptr)->fd, buf, 7);
+                write(1, buf, 7);
             }
         }
 
-        //sleep(1);
+        sleep(1);
 
     }
 
@@ -153,7 +152,7 @@ int connectAsClient(int clientFd, struct sockaddr_un* address_local, int epoll_f
         printf("massivereader - connectAsClient - error: %d\n", errno);
         return -1;
     }
-    set_non_blocking(clientFd);
+    //set_non_blocking(clientFd);
 
     struct typeOfConnection* conn  = (struct typeOfConnection*) malloc (sizeof(struct typeOfConnection));
     conn->fd = clientFd;
@@ -178,34 +177,35 @@ void read_from_inet_connection(int fd, int epoll_fd)
 {
     while(1)
     {
-        struct sockaddr_un* address_local = (struct sockaddr_un *) malloc(sizeof(struct sockaddr_un));
+        struct sockaddr_un address_local; //  = (struct sockaddr_un *) malloc(sizeof(struct sockaddr_un));
         //address_local = readStructure(fd);
-        if( (read(fd, address_local, sizeof(struct sockaddr_un))) != sizeof(struct sockaddr_un))
+        if( (read(fd, &address_local, sizeof(struct sockaddr_un))) != sizeof(struct sockaddr_un))
         {
             //write(1, &address_local, sizeof(struct sockaddr_un));
-            free(address_local);
+            //free(address_local);
+
             break;
         }
 
         printf("\n\nCzytam strukture\n\n");
 
         int clientFd = socketAsClient();
-        if ((connectAsClient(clientFd, address_local, epoll_fd)) != -1)
+        if ((connectAsClient(clientFd, &address_local, epoll_fd)) != -1)
         {
-            write(fd, address_local, sizeof(struct sockaddr_un));
-            write(1, address_local, sizeof(struct sockaddr_un));
+            write(fd, &address_local, sizeof(struct sockaddr_un));
+            write(1, &address_local, sizeof(struct sockaddr_un));
 
             printf("\nConnected to local server\n");
         }
         else
         {
-            address_local->sun_family = -1;
-            write(fd, address_local, sizeof(struct sockaddr_un));
-            //write(1, address_local, sizeof(struct sockaddr_un));
+            address_local.sun_family = -1;
+            write(fd, &address_local, sizeof(struct sockaddr_un));
+            //write(1, &address_local, sizeof(struct sockaddr_un));
 
-            printf("Cannot connect to local server!\n%s\n ", address_local->sun_path + 1);
+            printf("Cannot connect to local server!\n ");
         }
-        //sleep(1);
+        sleep(1);
     }
 
 }
@@ -262,7 +262,6 @@ int acceptConnection(int server_fd, int epoll_fd)
 {
     struct sockaddr_in in_address;
     socklen_t in_address_size = sizeof(in_address);
-    //memset(&in_address, 0, sizeof(struct sockaddr_in));
 
     int incomfd;
 
@@ -274,7 +273,7 @@ int acceptConnection(int server_fd, int epoll_fd)
 
     set_non_blocking(incomfd);
 
-    struct typeOfConnection* conn  = (struct typeOfConnection*) malloc (sizeof(struct typeOfConnection));
+    struct typeOfConnection* conn  = (struct typeOfConnection*) calloc (1, sizeof(struct typeOfConnection));
     conn->fd = incomfd;
     conn->type = 2;
 
