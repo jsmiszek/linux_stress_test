@@ -19,6 +19,7 @@
 #include <sys/epoll.h>
 #include <sys/random.h>
 #include <errno.h>
+#include <signal.h>
 
 #define MAX_EVENTS 50
 #define BUFFER_SIZE 256
@@ -159,21 +160,26 @@ int main(int argc, char** argv) {
 
     close(clientSocketFd);
 
-    //int* sockets = localFileDescriptors;
-   // printf("Wszystkie dekryptory: ");
+    createTimer(workTime);
 
-
-    //printf(" END\n");
-
-    struct timespec tim = {0, 700000000};
+    struct timespec tim;
+    tim.tv_sec = (int)(interval * 1000) / 1000000000;
+    tim.tv_nsec = (int)(interval * 1000) % 1000000000 ;
 
     int i = 0;
     while (numOfConnections--)
     {
-        printf("Na deskryptor %d\n", localFileDescriptors[i]);
+       /* printf("Na deskryptor %d\n", localFileDescriptors[i]);
         write(localFileDescriptors[i], "ABCD\n", strlen("ABCD\n"));
-        printf("Wyslalem komunikat po af local\n");
-        nanosleep(&tim,NULL);
+        printf("Wyslalem komunikat po af local\n");*/
+
+
+       sendDataToLocal(localFileDescriptors);
+       nanosleep(&tim,NULL);
+
+
+
+
 
         i++;
     }
@@ -206,6 +212,109 @@ void closeLocalDescriptors(int fd)
     local_sock_fds[i]=local_sock_fds[--local_sock_no];
 }
 */
+
+
+void sendDataToLocal(int* fdTab)
+{
+    struct timespec timestamp;
+    if(clock_gettime(CLOCK_REALTIME, &timestamp) == -1)
+    {
+        printf("sendLocalData - clock_gettime error %d\n", errno);
+        exit(-1);
+    }
+
+    int socketNum = rand() % acceptedConnections;
+
+    char* timeRepr = convertingTime(timestamp);
+}
+
+char* convertingTime(struct timespec tim)
+{
+    int minutes;
+    int seconds;
+    int nanoseconds;
+
+    char out[21] = {'0'};
+    out[20] = 0;
+
+    seconds = (int)tim.tv_sec % 60;
+    minutes = (int)tim.tv_sec % 3600 / 60;
+    nanoseconds = (int)tim.tv_nsec;
+
+    for(int i = 2; i != -1; i-- )
+    {
+        out[i] = (char)(minutes % 10) + '0';
+        minutes /= 10;
+    }
+
+    out[3] = '*';
+    out[4] = ':';
+
+    for(int i = 6; i != 4; i-- )
+    {
+        out[i] = (char)(seconds % 10) + '0';
+        seconds /= 10;
+    }
+
+    out[7] = ',';
+    out[19] = '0' + (char)(nanoseconds % 10); nanoseconds /= 10;
+    out[18] = (char)(nanoseconds % 10) + '0'; nanoseconds /= 10;
+    out[17] = (char)(nanoseconds % 10) + '0'; nanoseconds /= 10;
+    out[16] = '.';
+    out[15] = (char)(nanoseconds % 10) + '0'; nanoseconds /= 10;
+    out[14] = (char)(nanoseconds % 10) + '0'; nanoseconds /= 10;
+    out[13] = '.';
+    out[12] = (char)(nanoseconds % 10) + '0'; nanoseconds /= 10;
+    out[11] = (char)(nanoseconds % 10) + '0'; nanoseconds /= 10;
+    out[10] = '.';
+    out[9] = (char)(nanoseconds % 10) + '0'; nanoseconds /= 10;
+    out[8] = (char)(nanoseconds % 10) + '0';
+
+    write(1, out, 21);
+    write(1,"\n", 1);
+
+    return out;
+}
+
+
+
+void createTimer(float workTime)
+{
+    timer_t timer;
+    struct itimerspec its;
+
+    struct sigevent sigeven;
+    sigeven.sigev_notify = SIGEV_SIGNAL;
+    sigeven.sigev_signo = SIGUSR1;
+    sigeven.sigev_value.sival_ptr = &timer;
+
+    if ( timer_create(CLOCK_REALTIME, &sigeven, &timer) == -1)
+    {
+        printf("Blad utworzenia budzika\n");
+        exit(EXIT_FAILURE);
+    }
+
+
+    // zamiana z centy na nano
+    double tempTime = workTime * 10000000;
+
+    its.it_value.tv_sec = (int) (tempTime / 1000000000);
+    its.it_value.tv_nsec = (long long) tempTime % 1000000000;
+    its.it_interval.tv_sec = 0;
+    its.it_interval.tv_nsec = 0;
+    // its.it_value.tv_sec = 2;
+    //  its.it_value.tv_nsec = 999999999;
+
+    if ( timer_settime(timer, 0, &its, NULL) == -1 )
+    {
+        printf("timer_settime error createTimer\n");
+        printf("%d\n", errno);
+        // errno 22 - wychodzi po za zakres
+        exit(-1);
+    }
+}
+
+
 
 void readFromServer(int fd)
 {

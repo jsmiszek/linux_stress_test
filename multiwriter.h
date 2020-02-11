@@ -5,9 +5,13 @@
 #ifndef PROJEKT3_MULTIWRITER_H
 #define PROJEKT3_MULTIWRITER_H
 
+#include <time.h>
+
 //int epoll_fd;
 int rejectedConnections;
 int acceptedConnections;
+
+
 
 void read_parameters(int argc, char** argv, int* numOfConnections, int* port, float* interval, float* workTime);
 int connectAsClient(int port);
@@ -27,7 +31,14 @@ int createLocalServer(struct sockaddr_un address_local);
 
 void epollAdd(int fd, int flags, int epoll_fd);
 
+//////////////////////////////////////// budzik
 
+void createTimer(float workTime);
+
+//////////////////////time
+
+void sendDataToLocal();
+char* convertingTime(struct timespec tim);
 
 
 #endif //PROJEKT3_MULTIWRITER_H

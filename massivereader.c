@@ -116,7 +116,7 @@ int main(int argc, char** argv)
             }
         }
 
-        sleep(1);
+        //sleep(1);
 
     }
 
@@ -205,7 +205,7 @@ void read_from_inet_connection(int fd, int epoll_fd)
 
             printf("Cannot connect to local server!\n ");
         }
-        sleep(1);
+        //sleep(1);
     }
 
 }
