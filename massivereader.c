@@ -66,7 +66,7 @@ int main(int argc, char** argv)
         {
             //printf("\nfor count : %d\n", count);
             //printf("Typ polaczenia: %d\n",(((struct typeOfConnection*)events[i].data.ptr)->type) );
-            printf("Deskryptor: %d\n",(((struct typeOfConnection*)events[i].data.ptr)->fd) );
+            //printf("Deskryptor: %d\n",(((struct typeOfConnection*)events[i].data.ptr)->fd) );
 
 
 
@@ -181,14 +181,15 @@ void readFromLocalServer(struct typeOfConnection* conn, int logFileDescriptor)
     struct timespec currTime;
     char* strCurrTime;
     int fd = conn->fd;
-    //char* diffTime;
+    char* diffTime;
 
     if(read(fd, &timestamp, 21) == -1)
     {
         write(1, "read1 error\n", 13);
         exit(-1);
     }
-    write(1,&timestamp, 21);
+
+    //write(1,&timestamp, 21);
     write(1,"\n",1);
     if(read(fd, &address, 108) == -1)
     {
@@ -200,7 +201,6 @@ void readFromLocalServer(struct typeOfConnection* conn, int logFileDescriptor)
         write(1, "read1 error\n", 13);
         exit(-1);
     }
-    //w read_from inet connection zamien funckcje na char* i zwróć sun_path i teraz porowna sun_path z tym address
 
     if( strcmp(address, conn->address.sun_path) != 0 )
         return;
@@ -212,9 +212,27 @@ void readFromLocalServer(struct typeOfConnection* conn, int logFileDescriptor)
     }
 
     strCurrTime = convertingTime(currTime);
-    write(1, strCurrTime, 21);
 
-    if(write(logFileDescriptor, strCurrTime, sizeof(strCurrTime)) == -1)
+/*
+    write(1, "\n", 1);
+    write(1, timestamp, 21);
+    write(1, "\n", 1);
+    write(1, strCurrTime, 21);
+    write(1, "\n", 1);
+*/
+
+    /*write(1, "s: ", 3);
+    write(1, &sendTime.tv_sec, sizeof(sendTime.tv_sec));
+    write(1, "\n", 1);
+    write(1, "ns: ", 4);
+    write(1, &sendTime.tv_nsec, sizeof(sendTime.tv_nsec));
+    write(1, "\n", 1);
+*/
+
+    //printf("%ld s  %ld ns\n", sendTime.tv_sec, sendTime.tv_nsec);
+
+
+    if(write(logFileDescriptor, strCurrTime, 20) == -1)
     {
         write(1, "write1 error\n", 14);
         exit(-1);
@@ -224,7 +242,7 @@ void readFromLocalServer(struct typeOfConnection* conn, int logFileDescriptor)
         write(1, "write2 error\n", 14);
         exit(-1);
     }
-    if(write(logFileDescriptor, timestamp, 21) == -1)
+    if(write(logFileDescriptor, timestamp, 20) == -1)
     {
         write(1, "write3 error\n", 14);
         exit(-1);
@@ -235,15 +253,45 @@ void readFromLocalServer(struct typeOfConnection* conn, int logFileDescriptor)
         exit(-1);
     }
 
-    //diffTime = timeDelay(sendTime, currTime);
+    diffTime = timeDelay(sendTime, currTime);
 
+    if(write(logFileDescriptor, diffTime, 20) == -1)
+    {
+        write(1, "write4 error\n", 14);
+        exit(-1);
+    }
+    if(write(logFileDescriptor, "\n", 1) == -1)
+    {
+        write(1, "write4 error\n", 14);
+        exit(-1);
+    }
+
+    free(diffTime);
 
 }
 
-/*char* timeDelay(struct timespec sendTime, struct timespec currTime)
+char* timeDelay(struct timespec sendTime, struct timespec currTime)
 {
-    //struct timespec
-}*/
+    struct timespec time;
+    long long first;
+    long long second;
+    long long result;
+
+    first = (sendTime.tv_sec * 1000000000l) + sendTime.tv_nsec;
+    second = (currTime.tv_sec * 1000000000l) + currTime.tv_nsec;
+    result = second - first;
+    time.tv_sec = result / 1000000000l;
+    time.tv_nsec = result % 1000000000l;
+
+    //printf("%ld s  %ld ns\n", time->tv_sec, time->tv_nsec);
+
+
+    char* buf = convertingTime(time);
+    write(1,buf,21);
+    //write(1,"\n",1);
+
+    return buf;
+}
 
 void logCreate(char* prefix, int* oldFd)
 {
