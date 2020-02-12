@@ -17,6 +17,7 @@
 #include <sys/epoll.h>
 #include <sys/un.h>
 #include <errno.h>
+#include <time.h>
 
 
 #define MAXEVENTS 32
@@ -30,11 +31,13 @@ int main(int argc, char** argv)
     int server_fd;
 
     char* prefix = NULL;
+    int logFileDescriptor;
+    fileNo = 0;
     //int incomfd;
 
     read_parameters(argc, argv, &port, &prefix);
 
-
+    logCreate(prefix, &logFileDescriptor);
     ////////////////////////////// Connect as server ////////////////////////
 
 
@@ -50,19 +53,19 @@ int main(int argc, char** argv)
 
     printf("Przed while\n");
 
-
-    while(1)
+    int i = 1;
+    while(i)
     {
-        printf("\nPrzed epoll_wait\n");
+        //printf("\nPrzed epoll_wait\n");
 
         int count = epoll_wait(epoll_fd, events, MAXEVENTS, -1);
-        printf("Jestem po epoll wait\n");
+        //printf("Jestem po epoll wait\n");
 
 
         for(int i = 0; i < count; ++i)
         {
-            printf("\nfor count : %d\n", count);
-            printf("Typ polaczenia: %d\n",(((struct typeOfConnection*)events[i].data.ptr)->type) );
+            //printf("\nfor count : %d\n", count);
+            //printf("Typ polaczenia: %d\n",(((struct typeOfConnection*)events[i].data.ptr)->type) );
             printf("Deskryptor: %d\n",(((struct typeOfConnection*)events[i].data.ptr)->fd) );
 
 
@@ -71,7 +74,7 @@ int main(int argc, char** argv)
                 printf("\n\nevents flag\n");
                 if (epoll_ctl(epoll_fd, EPOLL_CTL_DEL, events[i].data.fd, NULL) == -1) {
                     printf("epoll delete error main!\n");
-                    exit(-1);
+                    //exit(-1);
                 }
                /* if (close(((struct typeOfConnection *) events[i].data.ptr)->fd) == -1) {
                     printf("Cannot close file descriptor: %d", errno);
@@ -108,11 +111,16 @@ int main(int argc, char** argv)
             }
             else if((((struct typeOfConnection*)events[i].data.ptr)->type) == 3 ) //local
             {
-                printf("Jestem local client\n");
+                printf("Jestem local client\n\n");
+                readFromLocalServer( ((struct typeOfConnection*)events[i].data.ptr), logFileDescriptor);
 
-                char buf[BUFSIZE];
-                read(((struct typeOfConnection*)events[i].data.ptr)->fd, buf, 7);
-                write(1, buf, 7);
+
+
+                /*char buf[256];
+                read(((struct typeOfConnection*)events[i].data.ptr)->fd, buf, 21);
+                write(1, buf, 21);*/
+
+
             }
         }
 
@@ -165,7 +173,101 @@ int connectAsClient(int clientFd, struct sockaddr_un* address_local, int epoll_f
     return 0;
 }
 
+void readFromLocalServer(struct typeOfConnection* conn, int logFileDescriptor)
+{
+    char timestamp[21];
+    char address[108];
+    struct timespec sendTime;
+    struct timespec currTime;
+    char* strCurrTime;
+    int fd = conn->fd;
+    //char* diffTime;
 
+    if(read(fd, &timestamp, 21) == -1)
+    {
+        write(1, "read1 error\n", 13);
+        exit(-1);
+    }
+    write(1,&timestamp, 21);
+    write(1,"\n",1);
+    if(read(fd, &address, 108) == -1)
+    {
+        write(1, "read2 error\n", 13);
+        exit(-1);
+    }
+    if(read(fd, &sendTime, sizeof(struct timespec)) == -1)
+    {
+        write(1, "read1 error\n", 13);
+        exit(-1);
+    }
+    //w read_from inet connection zamien funckcje na char* i zwróć sun_path i teraz porowna sun_path z tym address
+
+    if( strcmp(address, conn->address.sun_path) != 0 )
+        return;
+
+    if(clock_gettime(CLOCK_REALTIME, &currTime) == -1)
+    {
+        printf("sendLocalData - clock_gettime error %d\n", errno);
+        exit(-1);
+    }
+
+    strCurrTime = convertingTime(currTime);
+    write(1, strCurrTime, 21);
+
+    if(write(logFileDescriptor, strCurrTime, sizeof(strCurrTime)) == -1)
+    {
+        write(1, "write1 error\n", 14);
+        exit(-1);
+    }
+    if(write(logFileDescriptor, ":", 1) == -1)
+    {
+        write(1, "write2 error\n", 14);
+        exit(-1);
+    }
+    if(write(logFileDescriptor, timestamp, 21) == -1)
+    {
+        write(1, "write3 error\n", 14);
+        exit(-1);
+    }
+    if(write(logFileDescriptor, ":", 1) == -1)
+    {
+        write(1, "write4 error\n", 14);
+        exit(-1);
+    }
+
+    //diffTime = timeDelay(sendTime, currTime);
+
+
+}
+
+/*char* timeDelay(struct timespec sendTime, struct timespec currTime)
+{
+    //struct timespec
+}*/
+
+void logCreate(char* prefix, int* oldFd)
+{
+    int newFd = -1;
+    char* filePath = (char*) calloc (strlen(prefix) + 4, sizeof(char));
+
+
+    while(newFd == -1)
+    {
+        sprintf(filePath, "%s%03d", prefix, fileNo++);
+        newFd = open(filePath, O_WRONLY | O_CREAT | O_TRUNC, 0666);
+    }
+
+    //*oldFd = newFd;
+   /* if(close(*oldFd) == -1)
+    {
+        write(1, "close error\n",sizeof("close error\n"));
+        exit(-1);
+    }*/
+   close(*oldFd);
+
+    *oldFd = newFd;
+    free(filePath);
+}
 
 
 
@@ -193,7 +295,7 @@ void read_from_inet_connection(int fd, int epoll_fd)
         if ((connectAsClient(clientFd, &address_local, epoll_fd)) != -1)
         {
             write(fd, &address_local, sizeof(struct sockaddr_un));
-            write(1, &address_local, sizeof(struct sockaddr_un));
+            //write(1, &address_local, sizeof(struct sockaddr_un));
 
             printf("\nConnected to local server\n");
         }

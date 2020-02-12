@@ -6,19 +6,9 @@
 
 #IncludeRegexTransform: 
 
-/home/just/semestr5/linux/linux_stress_test/helper.c
-helper.h
 /home/just/semestr5/linux/linux_stress_test/helper.h
-stdio.h
+time.h
 -
-stdlib.h
--
-sys/epoll.h
--
-fcntl.h
--
-
-/home/just/semestr5/linux/linux_stress_test/helper.h
 
 /home/just/semestr5/linux/linux_stress_test/multiwriter.c
 multiwriter.h
@@ -53,6 +43,10 @@ sys/random.h
 -
 errno.h
 -
+signal.h
+-
 
 /home/just/semestr5/linux/linux_stress_test/multiwriter.h
+time.h
+-
 

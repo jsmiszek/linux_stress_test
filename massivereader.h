@@ -6,9 +6,11 @@
 #define PROJEKT3_MASSIVEREADER_H
 
 #include <sys/un.h>
+#include <time.h>
 
 
 //int *epoll_fd;
+int fileNo;
 
 struct typeOfConnection{
     int fd;
@@ -29,7 +31,11 @@ struct sockaddr_un readStructure(int fd);
 
 int connectAsClient(int clientFd, struct sockaddr_un* address_local, int epoll_fd);
 int socketAsClient();
+void readFromLocalServer(struct typeOfConnection* conn, int logFileDescriptor);
 
+char* timeDelay(struct timespec sendTime, struct timespec currTime);
+
+void logCreate(char* prefix, int* oldFd);
 
 /////////////////////////////else
 

@@ -11,6 +11,9 @@
 int rejectedConnections;
 int acceptedConnections;
 
+struct timespec sumTime;
+
+int stop;
 
 
 void read_parameters(int argc, char** argv, int* numOfConnections, int* port, float* interval, float* workTime);
@@ -38,7 +41,12 @@ void createTimer(float workTime);
 //////////////////////time
 
 void sendDataToLocal(int* fdTab, struct sockaddr_un address);
-char* convertingTime(struct timespec tim);
+void summaryTime(struct timespec startTime, struct timespec endTime);
+
+///////////////////////////////////////signals
+
+void sigHandler();
+void sigact();
 
 
 #endif //PROJEKT3_MULTIWRITER_H
