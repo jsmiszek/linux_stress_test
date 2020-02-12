@@ -26,6 +26,8 @@
 #define mld 1000000000
 
 int main(int argc, char** argv) {
+
+    printf("I'm working...\n\n");
     int numOfConnections;
     int port;
     float interval;
@@ -43,8 +45,6 @@ int main(int argc, char** argv) {
 
     int *localFileDescriptors = (int *) calloc (numOfConnections, sizeof(int));
     int *fdTab = localFileDescriptors;
-
-    printf("%d\n", numOfConnections);
 
     sigact();
     int epoll_fd = create_epoll();
@@ -93,54 +93,29 @@ int main(int argc, char** argv) {
             if (events[i].events & EPOLLERR || events[i].events & EPOLLHUP || !(events[i].events & EPOLLIN))
             {
 
-                if (epoll_ctl(epoll_fd, EPOLL_CTL_DEL, events[i].data.fd, NULL) == -1)
-                {
-                    printf("main - epoll_ctl delete error!\n");
-                    //exit(-1);
-                }
+                epoll_ctl(epoll_fd, EPOLL_CTL_DEL, events[i].data.fd, NULL);
 
                 for(int i = 0; i < numOfConnections; ++i)
                 {
                     if (localFileDescriptors[i] == events[i].data.fd)
                         localFileDescriptors[i] = 0;
                 }
-
-                if (close(events[i].data.fd) == -1)
-                {
-                    printf("Cannot close descriptor: %d\n", events[i].data.fd);
-                }
-                printf("\n\nevents flag\n");
+                close(events[i].data.fd);
 
             } else {
-                if (events[i].data.fd == serverFd) {
-                    /*int incomfd = */
+                if (events[i].data.fd == serverFd)
+                {
                     acceptConnection(events[i].data.fd, epoll_fd, &fdTab);
 
-                    /*
-                     * Losuj deskryptor i wyslij znacznik!!!!!!
-                     */
-
-                    //char buf[BUFFER_SIZE];
-//                    write(serverFd, "Jestem w polaczeniu local tu multiwriter\n", 30);
-                    //write(1, &buf, 30);
-                    printf("polaczylo sie z LOCAL- acceptConnection\n");
-
-                } else if (events[i].data.fd == clientSocketFd) {
+                } else if (events[i].data.fd == clientSocketFd)
+                {
                     readFromServer(clientSocketFd);
                 }
-                // sleep(1);
             }
-
-
-            //sleep(1);
-
-
         }
     }
-    //sleep(1);
 
-    if (epoll_ctl(epoll_fd, EPOLL_CTL_DEL, clientSocketFd, NULL) < 0)
-        printf("Cannot delete fd after while\n");
+    epoll_ctl(epoll_fd, EPOLL_CTL_DEL, clientSocketFd, NULL);
 
     close(clientSocketFd);
 
@@ -151,60 +126,18 @@ int main(int argc, char** argv) {
     time.tv_nsec = (int)(interval * 1000) % 1000000000 ;
 
 
-   /* printf("TABLICA DESKRYPTOROW! : ");
-    for(int i = 0; i < acceptedConnections; i++)
-        printf("  %d  ", localFileDescriptors[i]);
-    printf("\n");*/
-
-    while (stop)
+    while(stop)
     {
-       /* printf("Na deskryptor %d\n", localFileDescriptors[i]);
-        write(localFileDescriptors[i], "ABCD\n", strlen("ABCD\n"));
-        printf("Wyslalem komunikat po af local\n");*/
-
        sendDataToLocal(localFileDescriptors, local_address);
-
        nanosleep(&time,NULL);
-
-
     }
-    printf("\nWriting time: %ld s   %ld ns\n", sumTime.tv_sec, sumTime.tv_nsec);
-    printf("Minimum: \t%lld\n", min);
-    printf("Maximum: \t%lld\n", max);
 
-
-
-
-
-    /* if (epoll_ctl(epoll_fd, EPOLL_CTL_DEL, clientSocketFd, NULL) < 0)
-     {
-         printf("after while cannot epoll_ctl delete!\n");
-         exit(-1);
-     }*/
-    printf("\nKończe program!!!\n");
-    //close(serverFd);
-    //tu wysyłam znaczniki
-    //petla while ma sie skonczyc po ilosci polaczen udanych nie
-
-
+    printf("Writing time: %ld s   %ld ns\n", sumTime.tv_sec, sumTime.tv_nsec);
+    printf("Minimum: \t%lld ns\n", min);
+    printf("Maximum: \t%lld ns\n\n", max);
 
     return 0;
 }
-/*
-
-void closeLocalDescriptors(int fd)
-{
-    int i=0;
-    while(i<local_sock_no)
-        if(local_sock_fds[i++]==fd)
-            break;
-    if(i==local_sock_no)
-        return;
-    close(local_sock_fds[--i]);
-    epoll_ctl(epoll_fd,EPOLL_CTL_DEL,local_sock_fds[i],NULL);
-    local_sock_fds[i]=local_sock_fds[--local_sock_no];
-}
-*/
 
 
 void sendDataToLocal(int* fdTab, struct sockaddr_un address)
@@ -221,18 +154,11 @@ void sendDataToLocal(int* fdTab, struct sockaddr_un address)
         exit(-1);
     }
 
-
     randSocketNum = rand() % (acceptedConnections);
     while(fdTab[randSocketNum] == 0)
         randSocketNum = rand() % (acceptedConnections);
 
-    //int a = fdTab[randSocketNum];
-    //write(1, &a, sizeof(a));
-    //write(1, "JEST\n", sizeof("JEST\n"));
-   // printf("%d\n",a);
-
     timeRepr = convertingTime(timestamp);
-    write(1, timeRepr, 21);
 
     if(write(fdTab[randSocketNum], timeRepr, 21) == -1 )
     {
@@ -258,13 +184,11 @@ void sendDataToLocal(int* fdTab, struct sockaddr_un address)
     }
     summaryTime(timestamp, timestampEnd);
 
-    //write(1,sum->tv_sec,sizeof(sum->tv_sec));
-
     free(timeRepr);
 
-
-
 }
+
+
 
 void summaryTime(struct timespec start, struct timespec end)
 {
@@ -313,10 +237,12 @@ void sigact()
     sigact.sa_handler = sigHandler;
     if(sigaction(SIGUSR1, &sigact, NULL) == -1)
     {
-        write(1, "sigact error\n", sizeof("sigact error\n"));
+        write(1, "Sigact error\n", sizeof("Sigact error\n"));
         exit(-1);
     }
 }
+
+///////////////////////////////////timer
 
 
 void createTimer(float workTime)
@@ -335,7 +261,6 @@ void createTimer(float workTime)
         exit(-1);
     }
 
-
     // centy -> nano
     double tempTime = workTime * 10000000;
 
@@ -347,10 +272,11 @@ void createTimer(float workTime)
 
     if ( timer_settime(timer, 0, &its, NULL) == -1 )
     {
-        write(1, "settime error\n",sizeof("settime error\n"));
+        write(1, "Settime error\n",sizeof("Settime error\n"));
         exit(-1);
     }
 }
+
 
 void readFromServer(int fd)
 {
@@ -362,16 +288,12 @@ void readFromServer(int fd)
         if( (read(fd, local_address, sizeof(struct sockaddr_un))) != sizeof(struct sockaddr_un) )
             break;
 
-        printf("readFromServer!\n");
-
         if((int)local_address->sun_family == -1)
         {
-            printf("readFromServer - send structure with -1 \n");
             rejectedConnections++;
         }
         else
         {
-            printf("Odczytałem strukture sun_family = AF_LOCAL!\n");
             acceptedConnections++;
         }
     }
@@ -388,13 +310,11 @@ void sendStructureToServer(struct sockaddr_un address, int fd, int count)
             exit(-1);
         }
     }
-    printf("Wysyłam %d razy strukture!\n", count);
 }
 
 
 int connectAsClient(int port)
 {
-    printf("Wchodze do connectAsClient\n");
     int socket_fd;
     socket_fd = socket(AF_INET, SOCK_STREAM, 0);
 
@@ -417,7 +337,6 @@ int connectAsClient(int port)
     }
     set_non_blocking(socket_fd);
 
-    printf("wychodze z connect as client\n");
 
     return socket_fd;
 }
@@ -438,8 +357,6 @@ struct sockaddr_un sockaddrRandom()
     getrandom(stream + 1, 106, GRND_NONBLOCK);
 
     strcpy(address.sun_path, stream);
-    printf("Losowe\n");
-
 
     free(stream);
     return address;
@@ -454,7 +371,6 @@ struct sockaddr_un sockaddrRandom()
 
 int createLocalServer(struct sockaddr_un address_local)
 {
-    printf("Wchodze do create local server\n");
     int serverFd;
     serverFd = socket(AF_LOCAL, SOCK_STREAM, 0);
     if(serverFd == -1)
@@ -470,9 +386,6 @@ int createLocalServer(struct sockaddr_un address_local)
     }
     set_non_blocking(serverFd);
 
-
-    printf("wychodze z createLocalServer\n");
-
     return serverFd;
 }
 
@@ -481,46 +394,24 @@ int createLocalServer(struct sockaddr_un address_local)
 int acceptConnection(int serverFd, int epoll_fd, int** fdTab)
 {
 
-    printf("acceptConnection!\n");
     int incomfd = 0;
 
     if((incomfd = accept(serverFd, NULL, NULL)) == -1)
     {
         printf("acceptConnection error!\n");
-        //rejectedConnections++;
         exit(-1);
     }
-    //acceptedConnections++;
-
     //set_non_blocking(incomfd);
 
-
     **fdTab = incomfd;
-    printf("acceptConnection deskryptor: %d\n",**fdTab);
 
     (*fdTab) += 1;
 
     epollAdd(incomfd, EPOLLIN | EPOLLET, epoll_fd);
-    //printf("accepted local connection - acceptConnection!\n");
 
     return incomfd;
 }
-/*
-
-void listenFromClient(int fd, int count)
-{
-    printf("Wchodzę w listen\n");
-    if(listen(fd, count) == -1)
-    {
-        printf("multiwriter - listenFromClient - listen error\n");
-        exit(-1);
-    }
-    printf("Wychodze z listen\n");
-}
-*/
-
 ////////////////////////////////////////end
-
 
 
 /////////////////////////////////////// else

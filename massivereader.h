@@ -9,7 +9,6 @@
 #include <time.h>
 
 
-//int *epoll_fd;
 int fileNo;
 int newLog;
 
@@ -26,7 +25,6 @@ void listenToClient(int fd);
 void read_from_inet_connection(int fd, int epoll_fd);
 
 int acceptConnection(int server_fd, int epoll_fd);
-struct sockaddr_un readStructure(int fd);
 
 //////////////// klient ////////////////////////
 

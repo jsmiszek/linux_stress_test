@@ -83,8 +83,5 @@ char* convertingTime(struct timespec tim)
     out[9] = (char)(nanoseconds % 10) + '0'; nanoseconds /= 10;
     out[8] = (char)(nanoseconds % 10) + '0';
 
-    //write(1, out, 21);
-    write(1,"\n", 1);
-
     return out;
 }

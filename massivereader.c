@@ -25,9 +25,9 @@
 #define BUFSIZE 128
 
 
-
 int main(int argc, char** argv)
 {
+    printf("I'm working...\n");
     int port;
     int server_fd;
 
@@ -35,13 +35,11 @@ int main(int argc, char** argv)
     int logFileDescriptor;
     fileNo = 0;
     newLog = 0;
-    //int incomfd;
 
     read_parameters(argc, argv, &port, &prefix);
 
     logCreate(prefix, &logFileDescriptor);
     sigact();
-    ////////////////////////////// Connect as server ////////////////////////
 
 
     int epoll_fd = create_epoll();
@@ -53,92 +51,35 @@ int main(int argc, char** argv)
     events = (struct epoll_event *) malloc(MAXEVENTS * sizeof(struct epoll_event));
 
 
-
-    printf("Przed while\n");
-
     int i = 1;
     while(i)
     {
-        //printf("\nPrzed epoll_wait\n");
-
         int count = epoll_wait(epoll_fd, events, MAXEVENTS, -1);
-        //printf("Jestem po epoll wait\n");
-
 
         for(int i = 0; i < count; ++i)
         {
-            //printf("\nfor count : %d\n", count);
-            //printf("Typ polaczenia: %d\n",(((struct typeOfConnection*)events[i].data.ptr)->type) );
-            //printf("Deskryptor: %d\n",(((struct typeOfConnection*)events[i].data.ptr)->fd) );
 
-
-
-            if (events[i].events & EPOLLERR || events[i].events & EPOLLHUP || !(events[i].events & EPOLLIN)) {
-                printf("\n\nevents flag\n");
-                if (epoll_ctl(epoll_fd, EPOLL_CTL_DEL, events[i].data.fd, NULL) == -1) {
-                    printf("epoll delete error main!\n");
-                    //exit(-1);
-                }
-               /* if (close(((struct typeOfConnection *) events[i].data.ptr)->fd) == -1) {
-                    printf("Cannot close file descriptor: %d", errno);
-                    exit(-1);
-                    //break;
-                }*/
-                /*  else
-                  {
-                      printf("Closed file descriptor: %d\n", events[i].data.fd);
-                  }*/
-                //epoll_ctl(epoll_fd, EPOLL_CTL_DEL, events[i].data.fd, NULL);
+            if (events[i].events & EPOLLERR || events[i].events & EPOLLHUP || !(events[i].events & EPOLLIN))
+            {
+                epoll_ctl(epoll_fd, EPOLL_CTL_DEL, events[i].data.fd, NULL);
             }
             else if ((((struct typeOfConnection*)events[i].data.ptr)->type) == 1 ) //inet server
-            {
-                /*
-                 * akceptuje połączenie AF_INET
-                 */
-
-                printf("Jestem w server inet\n");
-                /*int incomfd = */
                 acceptConnection((((struct typeOfConnection*)events[i].data.ptr)->fd), epoll_fd);
-                printf("Serwer inet akceptuje polaczenie\n");
 
-            }
             else if(((struct typeOfConnection*)events[i].data.ptr)->type == 2 ) //polączenie inet client
-            {
-                /*
-                * czytam strukture z polączenie AF_INET
-                * tworze połaczenie AF_LOCAL
-                * odsyłam strukturę przez AF_INET
-                */
-                printf("czytanie struktury i polaczenie af_local, odeslanie struktury\n");
                 read_from_inet_connection((((struct typeOfConnection*)events[i].data.ptr)->fd), epoll_fd);
-            }
+
             else if((((struct typeOfConnection*)events[i].data.ptr)->type) == 3 ) //local
-            {
-                printf("Jestem local client\n\n");
                 readFromLocalServer( ((struct typeOfConnection*)events[i].data.ptr), logFileDescriptor);
-
-
-
-                /*char buf[256];
-                read(((struct typeOfConnection*)events[i].data.ptr)->fd, buf, 21);
-                write(1, buf, 21);*/
-
-
-            }
         }
         if(newLog)
         {
             logCreate(prefix, &logFileDescriptor);
             newLog = 0;
         }
-
     }
 
-
-    printf("END\n");
-
     close(server_fd);
-    //close(incomfd);
     free(events);
     return 0;
 }
@@ -166,13 +107,11 @@ int connectAsClient(int clientFd, struct sockaddr_un* address_local, int epoll_f
         printf("massivereader - connectAsClient - error: %d\n", errno);
         return -1;
     }
-    //set_non_blocking(clientFd);
 
     struct typeOfConnection* conn  = (struct typeOfConnection*) malloc (sizeof(struct typeOfConnection));
     conn->fd = clientFd;
     conn->type = 3;
     conn->address = *address_local;
-
 
     epollAdd1(EPOLLIN | EPOLLET, epoll_fd, conn);
 
@@ -195,8 +134,6 @@ void readFromLocalServer(struct typeOfConnection* conn, int logFileDescriptor)
         exit(-1);
     }
 
-    //write(1,&timestamp, 21);
-    write(1,"\n",1);
     if(read(fd, &address, 108) == -1)
     {
         write(1, "read2 error\n", 13);
@@ -218,24 +155,6 @@ void readFromLocalServer(struct typeOfConnection* conn, int logFileDescriptor)
     }
 
     strCurrTime = convertingTime(currTime);
-
-/*
-    write(1, "\n", 1);
-    write(1, timestamp, 21);
-    write(1, "\n", 1);
-    write(1, strCurrTime, 21);
-    write(1, "\n", 1);
-*/
-
-    /*write(1, "s: ", 3);
-    write(1, &sendTime.tv_sec, sizeof(sendTime.tv_sec));
-    write(1, "\n", 1);
-    write(1, "ns: ", 4);
-    write(1, &sendTime.tv_nsec, sizeof(sendTime.tv_nsec));
-    write(1, "\n", 1);
-*/
-
-    //printf("%ld s  %ld ns\n", sendTime.tv_sec, sendTime.tv_nsec);
 
 
     if(write(logFileDescriptor, strCurrTime, 20) == -1)
@@ -273,8 +192,9 @@ void readFromLocalServer(struct typeOfConnection* conn, int logFileDescriptor)
     }
 
     free(diffTime);
-
 }
+
+
 
 char* timeDelay(struct timespec sendTime, struct timespec currTime)
 {
@@ -289,12 +209,7 @@ char* timeDelay(struct timespec sendTime, struct timespec currTime)
     time.tv_sec = result / 1000000000l;
     time.tv_nsec = result % 1000000000l;
 
-    //printf("%ld s  %ld ns\n", time->tv_sec, time->tv_nsec);
-
-
     char* buf = convertingTime(time);
-    write(1,buf,21);
-    //write(1,"\n",1);
 
     return buf;
 }
@@ -304,19 +219,12 @@ void logCreate(char* prefix, int* oldFd)
     int newFd = -1;
     char* filePath = (char*) calloc (strlen(prefix) + 4, sizeof(char));
 
-
     while(newFd == -1)
     {
         sprintf(filePath, "%s%03d", prefix, fileNo++);
         newFd = open(filePath, O_WRONLY | O_CREAT | O_TRUNC, 0666);
     }
 
-    //*oldFd = newFd;
-   /* if(close(*oldFd) == -1)
-    {
-        write(1, "close error\n",sizeof("close error\n"));
-        exit(-1);
-    }*/
    close(*oldFd);
 
     *oldFd = newFd;
@@ -324,8 +232,9 @@ void logCreate(char* prefix, int* oldFd)
 }
 
 
-
 ////////////////////////////////////end klient local
+
+//////////////////////////////////// signal
 
 void sigHandler()
 {
@@ -350,37 +259,22 @@ void read_from_inet_connection(int fd, int epoll_fd)
 {
     while(1)
     {
-        struct sockaddr_un address_local; //  = (struct sockaddr_un *) malloc(sizeof(struct sockaddr_un));
-        //address_local = readStructure(fd);
+        struct sockaddr_un address_local;
         if( (read(fd, &address_local, sizeof(struct sockaddr_un))) != sizeof(struct sockaddr_un))
-        {
-            //write(1, &address_local, sizeof(struct sockaddr_un));
-            //free(address_local);
-
             break;
-        }
-
-        printf("\n\nCzytam strukture\n\n");
 
         int clientFd = socketAsClient();
         if ((connectAsClient(clientFd, &address_local, epoll_fd)) != -1)
         {
             write(fd, &address_local, sizeof(struct sockaddr_un));
-            //write(1, &address_local, sizeof(struct sockaddr_un));
-
-            printf("\nConnected to local server\n");
         }
         else
         {
             address_local.sun_family = -1;
             write(fd, &address_local, sizeof(struct sockaddr_un));
-            //write(1, &address_local, sizeof(struct sockaddr_un));
-
             printf("Cannot connect to local server!\n ");
         }
-        //sleep(1);
     }
-
 }
 
 
@@ -452,24 +346,11 @@ int acceptConnection(int server_fd, int epoll_fd)
 
     epollAdd1(EPOLLIN | EPOLLET, epoll_fd, conn);
 
-    printf("accepted connection!\n");
-
     return incomfd;
 }
 
 
 
-
-struct sockaddr_un readStructure(int fd)
-{
-    struct sockaddr_un newadd;
-    read(fd, &newadd, sizeof(struct sockaddr_un));
-
-    write(1, newadd.sun_path, 108);
-
-    return newadd;
-
-}
 ////////////////////////////////////////////////////////////////end server inet
 
 void epollAdd1(int flags, int epollFd, struct typeOfConnection* conn)
@@ -477,8 +358,6 @@ void epollAdd1(int flags, int epollFd, struct typeOfConnection* conn)
     struct epoll_event event;
     event.data.ptr = conn;
     event.events = flags;
-
-    printf("epollAdd1 FD : %d\n", ((struct typeOfConnection*)event.data.ptr)->fd);
 
     if((epoll_ctl(epollFd, EPOLL_CTL_ADD, ((struct typeOfConnection*)event.data.ptr)->fd, &event)) == -1)
     {
