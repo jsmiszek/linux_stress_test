@@ -15,6 +15,10 @@ struct timespec sumTime;
 
 int stop;
 
+long long max;
+long long min;
+
+
 
 void read_parameters(int argc, char** argv, int* numOfConnections, int* port, float* interval, float* workTime);
 int connectAsClient(int port);

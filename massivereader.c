@@ -18,6 +18,7 @@
 #include <sys/un.h>
 #include <errno.h>
 #include <time.h>
+#include <signal.h>
 
 
 #define MAXEVENTS 32
@@ -33,11 +34,13 @@ int main(int argc, char** argv)
     char* prefix = NULL;
     int logFileDescriptor;
     fileNo = 0;
+    newLog = 0;
     //int incomfd;
 
     read_parameters(argc, argv, &port, &prefix);
 
     logCreate(prefix, &logFileDescriptor);
+    sigact();
     ////////////////////////////// Connect as server ////////////////////////
 
 
@@ -123,8 +126,11 @@ int main(int argc, char** argv)
 
             }
         }
-
-        //sleep(1);
+        if(newLog)
+        {
+            logCreate(prefix, &logFileDescriptor);
+            newLog = 0;
+        }
 
     }
 
@@ -237,7 +243,7 @@ void readFromLocalServer(struct typeOfConnection* conn, int logFileDescriptor)
         write(1, "write1 error\n", 14);
         exit(-1);
     }
-    if(write(logFileDescriptor, ":", 1) == -1)
+    if(write(logFileDescriptor, " : ", 3) == -1)
     {
         write(1, "write2 error\n", 14);
         exit(-1);
@@ -247,7 +253,7 @@ void readFromLocalServer(struct typeOfConnection* conn, int logFileDescriptor)
         write(1, "write3 error\n", 14);
         exit(-1);
     }
-    if(write(logFileDescriptor, ":", 1) == -1)
+    if(write(logFileDescriptor, " : ", 3) == -1)
     {
         write(1, "write4 error\n", 14);
         exit(-1);
@@ -320,6 +326,23 @@ void logCreate(char* prefix, int* oldFd)
 
 
 ////////////////////////////////////end klient local
+
+void sigHandler()
+{
+    newLog = 1;
+}
+
+void sigact()
+{
+    struct sigaction sigact;
+    sigact.sa_flags = 0;
+    sigact.sa_handler = sigHandler;
+    if(sigaction(SIGUSR1, &sigact, NULL) == -1)
+    {
+        write(1, "sigact error\n", sizeof("sigact error\n"));
+        exit(-1);
+    }
+}
 
 ///////////////////////////////////////// server inet
 

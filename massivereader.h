@@ -11,6 +11,7 @@
 
 //int *epoll_fd;
 int fileNo;
+int newLog;
 
 struct typeOfConnection{
     int fd;
@@ -42,6 +43,11 @@ void logCreate(char* prefix, int* oldFd);
 void epollAdd1(int flags, int epollFd, struct typeOfConnection* conn);
 
 void read_parameters(int argc, char** argv, int* port, char** prefix);
+
+///////////////////////// signal
+
+void sigHandler();
+void sigact();
 
 
 #endif //PROJEKT3_MASSIVEREADER_H

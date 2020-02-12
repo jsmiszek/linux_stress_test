@@ -23,6 +23,7 @@
 
 #define MAX_EVENTS 50
 #define BUFFER_SIZE 256
+#define mld 1000000000
 
 int main(int argc, char** argv) {
     int numOfConnections;
@@ -34,6 +35,9 @@ int main(int argc, char** argv) {
     stop = 1;
     sumTime.tv_sec = 0;
     sumTime.tv_nsec = 0;
+
+    min = 1000000000;
+    max = 0;
 
     read_parameters(argc, argv, &numOfConnections, &port, &interval, &workTime);
 
@@ -73,63 +77,39 @@ int main(int argc, char** argv) {
     struct epoll_event *events;
     events = (struct epoll_event *) malloc(MAX_EVENTS * sizeof(struct epoll_event));
 
-    printf("Ide do while\n");
-
     //---------------------------------------------------------------------------------------------
 
 
     while (acceptedConnections + rejectedConnections < numOfConnections) {
-       // printf("Jestem w while1\n");
+
         int count = epoll_wait(epoll_fd, events, MAX_EVENTS, -1);
-        //printf("count w while : %d\n", count);
 
         if (count == -1)
             printf("epoll_wait error\n");
 
-        //printf("Jestem w while2\n");
-
 
         for (int i = 0; i < count; i++) {
-            //printf("petla for : %d\n", i);
-            printf("accepted Connection: %d\nrejected connecton: %d\n", acceptedConnections, rejectedConnections);
-            printf("descriptor: %d\n", events[i].data.fd);
 
-            if (events[i].events & EPOLLERR || events[i].events & EPOLLHUP || !(events[i].events & EPOLLIN)) {
-                /*if(events[i].data.fd != serverFd && events[i].data.fd != clientSocketFd)
+            if (events[i].events & EPOLLERR || events[i].events & EPOLLHUP || !(events[i].events & EPOLLIN))
+            {
+
+                if (epoll_ctl(epoll_fd, EPOLL_CTL_DEL, events[i].data.fd, NULL) == -1)
                 {
-                    //remove_from_working_sockets(events[i].data.fd);
+                    printf("main - epoll_ctl delete error!\n");
+                    //exit(-1);
                 }
-                else*/
+
+                for(int i = 0; i < numOfConnections; ++i)
                 {
-                    /* if ((close(events[i].data.fd)) == -1)
-                     {
-                         printf("Multiwriter - main - close error %d \n", errno);
-                         exit(-1);
-                     }*/
-
-                    if (epoll_ctl(epoll_fd, EPOLL_CTL_DEL, events[i].data.fd, NULL) == -1) {
-                        printf("main - epoll_ctl delete error!\n");
-                        //exit(-1);
-                    }
-
-                    for(int i = 0; i < numOfConnections; ++i)
-                        if(localFileDescriptors[i] == events[i].data.fd)
-                            localFileDescriptors[i] = 0;
-
-                    if (close(events[i].data.fd) == -1) {
-                        printf("Cannot close descriptor: %d\n", events[i].data.fd);
-
-                    }
-                    printf("\n\nevents flag\n");/*
-                    for (int j = 0; j < numOfConnections; ++j)
-                    {
-                        if( localFileDescriptors[j] == events[j].data.fd)
-                        {
-                            localFileDescriptors[j] = 0;
-                        }
-                    }*/
-
+                    if (localFileDescriptors[i] == events[i].data.fd)
+                        localFileDescriptors[i] = 0;
                 }
+
+                if (close(events[i].data.fd) == -1)
+                {
+                    printf("Cannot close descriptor: %d\n", events[i].data.fd);
+                }
+                printf("\n\nevents flag\n");
 
             } else {
                 if (events[i].data.fd == serverFd) {
@@ -188,7 +168,10 @@ int main(int argc, char** argv) {
 
 
     }
-    printf("\n%ld sec   %ld nsec", sumTime.tv_sec, sumTime.tv_nsec);
+    printf("\nWriting time: %ld s   %ld ns\n", sumTime.tv_sec, sumTime.tv_nsec);
+    printf("Minimum: \t%lld\n", min);
+    printf("Maximum: \t%lld\n", max);
+
 
 
 
@@ -283,28 +266,41 @@ void sendDataToLocal(int* fdTab, struct sockaddr_un address)
 
 }
 
-void summaryTime(struct timespec ts_start,struct timespec ts_end)
+void summaryTime(struct timespec start, struct timespec end)
 {
-    long nsec = sumTime.tv_nsec+ts_end.tv_nsec - ts_start.tv_nsec;
-    long shift = nsec/1000000000l;
-    sumTime.tv_sec += ts_end.tv_sec - ts_start.tv_sec + shift;
-    sumTime.tv_nsec = nsec%1000000000l;
+   long long nanosecond = 0;
+   long long second = 0;
+
+   nanosecond = end.tv_nsec - start.tv_nsec;
+   second = end.tv_sec - start.tv_sec;
+
+   if(nanosecond < 0)
+   {
+       nanosecond = mld + nanosecond;
+       second -= 1;
+   }
+
+   sumTime.tv_sec += second;
+
+   if( (sumTime.tv_nsec + nanosecond) >= mld )
+   {
+       sumTime.tv_nsec = (sumTime.tv_nsec + nanosecond) % mld;
+       sumTime.tv_sec += 1;
+   }
+   else
+   {
+       sumTime.tv_nsec += nanosecond;
+   }
+
+   if(nanosecond < min)
+        min = nanosecond;
+   if(nanosecond > max)
+       max = nanosecond;
+
 }
 
-/*
-void summaryTime(struct timespec startTime, struct timespec endTime)
-{
-    sumTime.tv_sec += endTime.tv_sec - startTime.tv_sec + ((sumTime.tv_nsec + endTime.tv_nsec - startTime.tv_nsec)/1000000000);
-    long nanosec = (sumTime.tv_nsec + endTime.tv_nsec - startTime.tv_nsec)%1000000000;
-    if(nanosec < 0)
-        sumTime.tv_nsec = -nanosec;
-    else
-        sumTime.tv_nsec = nanosec;
-    write(1,"JEST\n",sizeof("JEST\n"));
-
-}*/
-
 ////////////////////////////// signal
+
 void sigHandler()
 {
     stop = 0;
@@ -321,8 +317,6 @@ void sigact()
         exit(-1);
     }
 }
-
-
 
 
 void createTimer(float workTime)
@@ -357,8 +351,6 @@ void createTimer(float workTime)
         exit(-1);
     }
 }
-
-
 
 void readFromServer(int fd)
 {
@@ -400,8 +392,6 @@ void sendStructureToServer(struct sockaddr_un address, int fd, int count)
 }
 
 
-
-
 int connectAsClient(int port)
 {
     printf("Wchodze do connectAsClient\n");
@@ -433,7 +423,6 @@ int connectAsClient(int port)
 }
 
 
-
 struct sockaddr_un sockaddrRandom()
 {
 
@@ -441,20 +430,18 @@ struct sockaddr_un sockaddrRandom()
 
     address.sun_family = AF_LOCAL;
 
-
     char* stream = (char*) calloc (108, sizeof(char));
 
     stream[0] = '\0';
-    stream++;
+    //stream++;
 
-    getrandom(stream, 107, GRND_NONBLOCK);
+    getrandom(stream + 1, 106, GRND_NONBLOCK);
 
     strcpy(address.sun_path, stream);
     printf("Losowe\n");
 
 
-
-    free(--stream);
+    free(stream);
     return address;
 }
 
@@ -491,16 +478,10 @@ int createLocalServer(struct sockaddr_un address_local)
 
 
 
-
 int acceptConnection(int serverFd, int epoll_fd, int** fdTab)
 {
-    /*struct sockaddr in_address;
-    int in_address_size = sizeof(in_address);
-    memset(&in_address, 0, sizeof(struct sockaddr_in));*/
 
-    /*(struct sockaddr*) &in_address, (socklen_t *)&in_address_size)*/
-
-    printf("acceptConnection WCHODZE KURWA!!\n");
+    printf("acceptConnection!\n");
     int incomfd = 0;
 
     if((incomfd = accept(serverFd, NULL, NULL)) == -1)
