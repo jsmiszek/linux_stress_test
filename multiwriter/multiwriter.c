@@ -32,21 +32,21 @@ int main(int argc, char** argv) {
     int port;
     float interval;
     float workTime;
-    rejectedConnections = 0;
-    acceptedConnections = 0;
-    stop = 1;
-    sumTime.tv_sec = 0;
-    sumTime.tv_nsec = 0;
 
     min = 1000000000;
     max = 0;
 
     read_parameters(argc, argv, &numOfConnections, &port, &interval, &workTime);
 
+    rejectedConnections = 0;
+    acceptedConnections = 0;
+
     int *localFileDescriptors = (int *) calloc (numOfConnections, sizeof(int));
     int *fdTab = localFileDescriptors;
 
+    stop = 1;
     sigact();
+
     int epoll_fd = create_epoll();
 
 
@@ -118,6 +118,9 @@ int main(int argc, char** argv) {
     epoll_ctl(epoll_fd, EPOLL_CTL_DEL, clientSocketFd, NULL);
 
     close(clientSocketFd);
+    
+    sumTime.tv_sec = 0;
+    sumTime.tv_nsec = 0;
 
     createTimer(workTime);
 
