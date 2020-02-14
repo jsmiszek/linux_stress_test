@@ -248,7 +248,7 @@ void sigact()
 void createTimer(float workTime)
 {
     timer_t timer;
-    struct itimerspec its;
+    struct itimerspec* its = (struct itimerspec*) calloc (1, sizeof(struct itimerspec));
 
     struct sigevent sigeven;
     sigeven.sigev_notify = SIGEV_SIGNAL;
@@ -262,15 +262,12 @@ void createTimer(float workTime)
     }
 
     // centy -> nano
-    double tempTime = workTime * 10000000;
 
-    its.it_value.tv_sec = (int) (tempTime / 1000000000);
-    its.it_value.tv_nsec = (long long) tempTime % 1000000000;
-    its.it_interval.tv_sec = 0;
-    its.it_interval.tv_nsec = 0;
+    double tempTime = workTime * (mld / 100);
+    its->it_value.tv_sec = (int) (tempTime / mld);
+    its->it_value.tv_nsec = (long long) tempTime % mld;
 
-
-    if ( timer_settime(timer, 0, &its, NULL) == -1 )
+    if ( timer_settime(timer, 0, its, NULL) == -1 )
     {
         write(1, "Settime error\n",sizeof("Settime error\n"));
         exit(-1);
@@ -289,13 +286,9 @@ void readFromServer(int fd)
             break;
 
         if((int)local_address->sun_family == -1)
-        {
             rejectedConnections++;
-        }
         else
-        {
             acceptedConnections++;
-        }
     }
 }
 
