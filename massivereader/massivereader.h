@@ -24,7 +24,9 @@ void listenToClient(int fd);
 
 void read_from_inet_connection(int fd, int epoll_fd);
 
-int acceptConnection(int server_fd, int epoll_fd);
+void addConnection(int server_fd, int epoll_fd);
+int acceptConnection(int fd);
+
 
 //////////////// klient ////////////////////////
 

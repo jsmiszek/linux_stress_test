@@ -64,7 +64,7 @@ int main(int argc, char** argv)
                 epoll_ctl(epoll_fd, EPOLL_CTL_DEL, events[i].data.fd, NULL);
             }
             else if ((((struct typeOfConnection*)events[i].data.ptr)->type) == 1 ) //inet server
-                acceptConnection((((struct typeOfConnection*)events[i].data.ptr)->fd), epoll_fd);
+                addConnection((((struct typeOfConnection*)events[i].data.ptr)->fd), epoll_fd);
 
             else if(((struct typeOfConnection*)events[i].data.ptr)->type == 2 ) //polączenie inet client
                 read_from_inet_connection((((struct typeOfConnection*)events[i].data.ptr)->fd), epoll_fd);
@@ -333,26 +333,32 @@ int socket_bind(int port, int epoll_fd)
 }
 
 
-int acceptConnection(int server_fd, int epoll_fd)
+void addConnection(int server_fd, int epoll_fd)
 {
-    struct sockaddr_in in_address;
-    socklen_t in_address_size = sizeof(in_address);
-
-    int incomfd;
-
-    if((incomfd = accept(server_fd,(struct sockaddr*) &in_address, &in_address_size)) == -1)
-    {
-        printf("acceptConnection error!\n");
-        exit(-1);
-    }
-
-    set_non_blocking(incomfd);
+    int incomfd = acceptConnection(server_fd);
 
     struct typeOfConnection* conn  = (struct typeOfConnection*) calloc (1, sizeof(struct typeOfConnection));
     conn->fd = incomfd;
     conn->type = 2;
 
     epollAdd1(EPOLLIN | EPOLLET, epoll_fd, conn);
+
+}
+
+
+int acceptConnection(int fd)
+{
+    struct sockaddr_in in_address;
+    socklen_t in_address_size = sizeof(in_address);
+
+    int incomfd;
+
+    if((incomfd = accept(fd,(struct sockaddr*) &in_address, &in_address_size)) == -1)
+    {
+        printf("acceptConnection error!\n");
+        exit(-1);
+    }
+    set_non_blocking(incomfd);
 
     return incomfd;
 }
