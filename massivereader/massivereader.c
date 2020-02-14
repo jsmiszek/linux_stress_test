@@ -393,13 +393,13 @@ void read_parameters(char** argv, char** prefix, int* port, int argc)
     int opt;
 
     while( (opt = getopt(argc, argv, "O:")) != -1 )
-    {
         switch(opt)
+        {
             case 'O':
                 *prefix = optarg;
                 flags++;
                 break;
-    }
+        }
 
     *port = strtol(argv[optind],NULL, 10);
 
