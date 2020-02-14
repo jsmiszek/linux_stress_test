@@ -102,11 +102,9 @@ int socketAsClient()
 
 int connectAsClient(int clientFd, struct sockaddr_un* address_local, int epoll_fd)
 {
-    if( (connect(clientFd, (struct sockaddr *) address_local, sizeof(struct sockaddr_un))) == -1)
-    {
-        printf("massivereader - connectAsClient - error: %d\n", errno);
+
+    if(connectClient(clientFd, address_local) == -1)
         return -1;
-    }
 
     struct typeOfConnection* conn  = (struct typeOfConnection*) malloc (sizeof(struct typeOfConnection));
     conn->fd = clientFd;
@@ -115,6 +113,16 @@ int connectAsClient(int clientFd, struct sockaddr_un* address_local, int epoll_f
 
     epollAdd1(EPOLLIN | EPOLLET, epoll_fd, conn);
 
+    return 0;
+}
+
+int connectClient(int clientFd, struct sockaddr_un* address_local)
+{
+    if( (connect(clientFd, (struct sockaddr *) address_local, sizeof(struct sockaddr_un))) == -1)
+    {
+        printf("massivereader - connectAsClient - error: %d\n", errno);
+        return -1;
+    }
     return 0;
 }
 

@@ -1,6 +1,6 @@
 all: directory makeprograms linkprograms
 
-directory:
+directory: clean
 	mkdir -p ODP
 
 makeprograms:

@@ -29,6 +29,8 @@ int acceptConnection(int server_fd, int epoll_fd);
 //////////////// klient ////////////////////////
 
 int connectAsClient(int clientFd, struct sockaddr_un* address_local, int epoll_fd);
+int connectClient(int clientFd, struct sockaddr_un* address_local);
+
 int socketAsClient();
 void readFromLocalServer(struct typeOfConnection* conn, int logFileDescriptor);
 
