@@ -91,7 +91,9 @@ int main(int argc, char** argv) {
                 for(int i = 0; i < numOfConnections; ++i)
                 {
                     if (localFileDescriptors[i] == events[i].data.fd)
+                    {
                         localFileDescriptors[i] = 0;
+                    }
                 }
                 close(events[i].data.fd);
 
@@ -100,7 +102,8 @@ int main(int argc, char** argv) {
                 {
                     acceptConnection(events[i].data.fd, epoll_fd, &fdTab);
 
-                } else if (events[i].data.fd == clientSocketFd)
+                }
+                else if (events[i].data.fd == clientSocketFd)
                 {
                     readFromServer(clientSocketFd);
                 }
