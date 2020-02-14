@@ -401,7 +401,7 @@ int acceptConnection(int serverFd, int epoll_fd, int** fdTab)
 
     **fdTab = incomfd;
 
-    (*fdTab) += 1;
+    (*fdTab)++;
 
     epollAdd(incomfd, EPOLLIN | EPOLLET, epoll_fd);
 

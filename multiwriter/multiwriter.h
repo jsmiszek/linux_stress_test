@@ -7,18 +7,16 @@
 
 #include <time.h>
 
+long long max;
+long long min;
+int stop;
+
 int rejectedConnections;
 int acceptedConnections;
 
 struct timespec sumTime;
 
-int stop;
 
-long long max;
-long long min;
-
-
-void read_parameters(int argc, char** argv, int* numOfConnections, int* port, float* interval, float* workTime);
 int connectAsClient(int port);
 struct sockaddr_un sockaddrRandom();
 
@@ -47,6 +45,9 @@ void summaryTime(struct timespec startTime, struct timespec endTime);
 
 void sigHandler();
 void sigact();
+
+void read_parameters(int argc, char** argv, int* numOfConnections, int* port, float* interval, float* workTime);
+
 
 
 #endif //PROJEKT3_MULTIWRITER_H
