@@ -140,6 +140,42 @@ int main(int argc, char** argv) {
 }
 
 
+
+void summaryTime(struct timespec start, struct timespec end)
+{
+    long long nanosecond = 0;
+    long long second = 0;
+
+    nanosecond = end.tv_nsec - start.tv_nsec;
+    second = end.tv_sec - start.tv_sec;
+
+    if(nanosecond < 0)
+    {
+        nanosecond = mld + nanosecond;
+        second -= 1;
+    }
+
+    sumTime.tv_sec += second;
+
+    if( (sumTime.tv_nsec + nanosecond) >= mld )
+    {
+        sumTime.tv_nsec = (sumTime.tv_nsec + nanosecond) % mld;
+        sumTime.tv_sec += 1;
+    }
+    else
+    {
+        sumTime.tv_nsec += nanosecond;
+    }
+
+    if(nanosecond < min)
+        min = nanosecond;
+    if(nanosecond > max)
+        max = nanosecond;
+
+}
+
+
+
 void sendDataToLocal(int* fdTab, struct sockaddr_un address)
 {
     struct timespec timestamp;
@@ -189,39 +225,6 @@ void sendDataToLocal(int* fdTab, struct sockaddr_un address)
 }
 
 
-
-void summaryTime(struct timespec start, struct timespec end)
-{
-   long long nanosecond = 0;
-   long long second = 0;
-
-   nanosecond = end.tv_nsec - start.tv_nsec;
-   second = end.tv_sec - start.tv_sec;
-
-   if(nanosecond < 0)
-   {
-       nanosecond = mld + nanosecond;
-       second -= 1;
-   }
-
-   sumTime.tv_sec += second;
-
-   if( (sumTime.tv_nsec + nanosecond) >= mld )
-   {
-       sumTime.tv_nsec = (sumTime.tv_nsec + nanosecond) % mld;
-       sumTime.tv_sec += 1;
-   }
-   else
-   {
-       sumTime.tv_nsec += nanosecond;
-   }
-
-   if(nanosecond < min)
-        min = nanosecond;
-   if(nanosecond > max)
-       max = nanosecond;
-
-}
 
 ////////////////////////////// signal
 
