@@ -33,13 +33,7 @@ int main(int argc, char** argv) {
     float interval;
     float workTime;
 
-    min = 1000000000;
-    max = 0;
-
     read_parameters(argc, argv, &numOfConnections, &port, &interval, &workTime);
-
-    rejectedConnections = 0;
-    acceptedConnections = 0;
 
     int *localFileDescriptors = (int *) calloc (numOfConnections, sizeof(int));
     int *fdTab = localFileDescriptors;
@@ -49,9 +43,7 @@ int main(int argc, char** argv) {
 
     int epoll_fd = create_epoll();
 
-
     //------------------ server ------------------------------------
-
 
     struct sockaddr_un local_address = sockaddrRandom();
     int serverFd;
@@ -62,9 +54,7 @@ int main(int argc, char** argv) {
         exit(-1);
     }
 
-
     // -------------------------- client ---------------------------------------------------------
-
 
     int clientSocketFd;
     clientSocketFd = connectAsClient(port);
@@ -78,6 +68,9 @@ int main(int argc, char** argv) {
     events = (struct epoll_event *) malloc(MAX_EVENTS * sizeof(struct epoll_event));
 
     //---------------------------------------------------------------------------------------------
+
+    rejectedConnections = 0;
+    acceptedConnections = 0;
 
 
     while (acceptedConnections + rejectedConnections < numOfConnections) {
@@ -118,7 +111,7 @@ int main(int argc, char** argv) {
     epoll_ctl(epoll_fd, EPOLL_CTL_DEL, clientSocketFd, NULL);
 
     close(clientSocketFd);
-    
+
     sumTime.tv_sec = 0;
     sumTime.tv_nsec = 0;
 
@@ -128,6 +121,8 @@ int main(int argc, char** argv) {
     time.tv_sec = (int)(interval * 1000) / 1000000000;
     time.tv_nsec = (int)(interval * 1000) % 1000000000 ;
 
+    min = 1000000000;
+    max = 0;
 
     while(stop)
     {
