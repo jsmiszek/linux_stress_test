@@ -1,11 +1,13 @@
-all: massivereader multiwriter
+all: directory makeprograms linkprograms
 
-massivereader:
-	gcc -Wall -o massivereader massivereader.c helper.c -lrt
-	
-multiwriter:
-	gcc -Wall -o multiwriter multiwriter.c helper.c -lrt
-	
-clean: 
-	rm  massivereader
-	rm  multiwriter
+directory:
+	mkdir -p ODP
+
+makeprograms:
+	$(MAKE) -C massivereader; $(MAKE) -C multiwriter
+
+linkprograms:
+	ln -s ../massivereader/massivereader ODP/massivereader ; ln -s ../multiwriter/multiwriter ODP/multiwriter
+
+clean:
+	$(MAKE) -C massivereader clean; $(MAKE) -C multiwriter clean; rm -rf ODP

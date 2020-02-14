@@ -1,1 +1,0 @@
-/usr/bin/cc -g   CMakeFiles/massivereader.dir/massivereader.c.o CMakeFiles/massivereader.dir/helper.c.o  -o massivereader 

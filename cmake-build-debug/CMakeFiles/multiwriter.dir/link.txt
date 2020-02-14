@@ -1,1 +1,0 @@
-/usr/bin/cc -g   CMakeFiles/multiwriter.dir/multiwriter.c.o CMakeFiles/multiwriter.dir/helper.c.o  -o multiwriter 
