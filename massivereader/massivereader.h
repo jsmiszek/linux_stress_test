@@ -42,7 +42,7 @@ void logCreate(char* prefix, int* oldFd);
 
 void epollAdd1(int flags, int epollFd, struct typeOfConnection* conn);
 
-void read_parameters(int argc, char** argv, int* port, char** prefix);
+void read_parameters(char** argv, char** prefix, int* port, int argc);
 
 ///////////////////////// signal
 

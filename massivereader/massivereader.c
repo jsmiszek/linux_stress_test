@@ -36,7 +36,7 @@ int main(int argc, char** argv)
     fileNo = 0;
     newLog = 0;
 
-    read_parameters(argc, argv, &port, &prefix);
+    read_parameters(argv, &prefix, &port, argc);
 
     logCreate(prefix, &logFileDescriptor);
     sigact();
@@ -375,32 +375,24 @@ void epollAdd1(int flags, int epollFd, struct typeOfConnection* conn)
 }
 
 
-void read_parameters(int argc, char** argv, int* port, char** prefix)
+void read_parameters(char** argv, char** prefix, int* port, int argc)
 {
-    int opt;
-    int flags = 0;
-
     if(argc != 4)
     {
         printf("To few arguments!\n");
         exit(-1);
     }
 
+    int flags = 0;
+    int opt;
+
     while( (opt = getopt(argc, argv, "O:")) != -1 )
     {
         switch(opt)
-        {
             case 'O':
                 *prefix = optarg;
                 flags++;
                 break;
-        }
-    }
-
-    if(flags != 1)
-    {
-        printf("Enter the prefix!\n");
-        exit(-1);
     }
 
     *port = strtol(argv[optind],NULL, 10);
@@ -408,6 +400,12 @@ void read_parameters(int argc, char** argv, int* port, char** prefix)
     if(*port < 0 || *port > 64000)
     {
         printf("Wrong port number!\nChoose port between 0 and 64000\n");
+        exit(-1);
+    }
+
+    if(flags != 1)
+    {
+        printf("Enter the prefix!\n");
         exit(-1);
     }
 
